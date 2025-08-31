@@ -125,3 +125,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* 自定义滚动条隐藏样式 */
+  .hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+}

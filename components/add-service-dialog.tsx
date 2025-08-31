@@ -17,31 +17,23 @@ interface Service {
   description: string
   repository: string
   status: "healthy" | "warning" | "error" | "maintenance"
-  projectId: string
   techStack: string[]
   testBranch: string
   masterBranch: string
-}
-
-interface Project {
-  id: string
-  name: string
 }
 
 interface AddServiceDialogProps {
   onClose: () => void
   onAddService: (service: Service) => void
   existingServices: Service[]
-  projects: Project[]
 }
 
-export function AddServiceDialog({ onClose, onAddService, existingServices, projects }: AddServiceDialogProps) {
+export function AddServiceDialog({ onClose, onAddService, existingServices }: AddServiceDialogProps) {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     repository: "",
     status: "healthy" as Service["status"],
-    projectId: projects?.[0]?.id || "",
     testBranch: "develop",
     masterBranch: "main",
   })
@@ -59,7 +51,6 @@ export function AddServiceDialog({ onClose, onAddService, existingServices, proj
       description: formData.description,
       repository: formData.repository,
       status: formData.status,
-      projectId: formData.projectId,
       techStack,
       testBranch: formData.testBranch,
       masterBranch: formData.masterBranch,
@@ -93,24 +84,6 @@ export function AddServiceDialog({ onClose, onAddService, existingServices, proj
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div>
-            <Label htmlFor="project">所属项目 *</Label>
-            <Select
-              value={formData.projectId}
-              onValueChange={(value) => setFormData({ ...formData, projectId: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="选择项目" />
-              </SelectTrigger>
-              <SelectContent>
-                {projects?.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

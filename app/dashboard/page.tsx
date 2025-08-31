@@ -28,7 +28,6 @@ interface Task {
     avatar?: string
   }
   gitBranch?: string
-  projectId: string
   serviceId: string
   labels: string[]
 }
@@ -39,7 +38,6 @@ interface Service {
   description: string
   repository: string
   status: "healthy" | "warning" | "error" | "maintenance"
-  projectId: string
   owner: string
   techStack: string[]
   dependencies: string[]

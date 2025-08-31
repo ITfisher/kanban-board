@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Server, GitBranch, Settings, ChevronLeft, ChevronRight, Kanban, FileText, BarChart3, FolderOpen } from "lucide-react"
+import { LayoutDashboard, Server, GitBranch, Settings, ChevronLeft, ChevronRight, Kanban, FileText, BarChart3 } from "lucide-react"
 
 interface SidebarProps {
   taskCounts?: Record<string, number>
@@ -18,12 +18,6 @@ const navigation = [
     href: "/dashboard",
     icon: BarChart3,
     description: "数据统计与分析",
-  },
-  {
-    name: "项目管理",
-    href: "/projects",
-    icon: FolderOpen,
-    description: "项目维度管理服务、需求等内容",
   },
   {
     name: "服务管理",
@@ -38,16 +32,16 @@ const navigation = [
     description: "管理代码分支",
   },
   {
-    name: "需求管理",
-    href: "/requirements",
+    name: "任务管理",
+    href: "/tasks",
     icon: Kanban,
     description: "管理项目任务和进度",
   },
   {
-    name: "需求详情",
-    href: "/requirements/list",
+    name: "任务详情",
+    href: "/tasks/list",
     icon: FileText,
-    description: "查看需求详细信息",
+    description: "查看任务详细信息",
   },
   {
     name: "设置",
@@ -109,7 +103,7 @@ export function Sidebar({ taskCounts = {} }: SidebarProps) {
                   {!collapsed && (
                     <>
                       <span className="flex-1">{item.name}</span>
-                      {item.name === "需求管理" && totalTasks > 0 && (
+                      {item.name === "任务管理" && totalTasks > 0 && (
                         <Badge variant="secondary" className="text-xs">
                           {totalTasks}
                         </Badge>

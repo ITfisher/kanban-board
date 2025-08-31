@@ -22,9 +22,10 @@ interface Task {
   gitBranch?: string
   service: string
   labels: string[]
+  jiraUrl?: string
 }
 
-export default function RequirementsPage() {
+export default function TasksPage() {
   const [tasks] = useLocalStorage<Task[]>("kanban-tasks", [])
   const [selectedPriority, setSelectedPriority] = useState<string>("all")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
@@ -88,8 +89,8 @@ export default function RequirementsPage() {
             <div className="flex items-center gap-4">
               <FileText className="h-6 w-6 text-primary" />
               <div>
-                <h1 className="text-2xl font-bold text-foreground">需求详情</h1>
-                <p className="text-sm text-muted-foreground">查看和管理所有项目需求</p>
+                <h1 className="text-2xl font-bold text-foreground">任务详情</h1>
+                <p className="text-sm text-muted-foreground">查看和管理所有项目任务</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -124,12 +125,12 @@ export default function RequirementsPage() {
           {filteredTasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">暂无需求</h3>
+              <h3 className="text-lg font-semibold mb-2">暂无任务</h3>
               <p className="text-muted-foreground mb-4">
-                {tasks.length === 0 ? "还没有创建任何需求" : "没有符合筛选条件的需求"}
+                {tasks.length === 0 ? "还没有创建任何任务" : "没有符合筛选条件的任务"}
               </p>
-              <Link href="/requirements">
-                <Button>前往看板创建需求</Button>
+              <Link href="/tasks">
+                <Button>前往看板创建任务</Button>
               </Link>
             </div>
           ) : (
@@ -189,7 +190,7 @@ export default function RequirementsPage() {
                     )}
 
                     <div className="pt-2 border-t">
-                      <Link href={`/requirements/${task.id}`}>
+                      <Link href={`/tasks/${task.id}`}>
                         <Button variant="outline" size="sm" className="w-full bg-transparent">
                           <Eye className="h-4 w-4 mr-2" />
                           查看详情

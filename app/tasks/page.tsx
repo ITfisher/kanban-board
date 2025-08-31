@@ -23,23 +23,8 @@ interface Task {
     name: string
     avatar?: string
   }
-  projectId: string
-  serviceId: string
   labels: string[]
-}
-
-interface Service {
-  id: string
-  name: string
-  description: string
-  repository: string
-  status: "healthy" | "warning" | "error" | "maintenance"
-  projectId: string
-  owner: string
-  techStack: string[]
-  dependencies: string[]
-  lastDeployment: string
-  version: string
+  jiraUrl?: string
 }
 
 
@@ -53,9 +38,6 @@ const statusColumns = [
 
 export default function KanbanBoard() {
   const [tasks, setTasks] = useLocalStorage<Task[]>("kanban-tasks", [])
-  const [services, setServices] = useLocalStorage<Service[]>("kanban-services", [])
-  const [projects, setProjects] = useLocalStorage<any[]>("kanban-projects", [])
-  const [selectedService, setSelectedService] = useLocalStorage<string>("kanban-selected-service", "全部服务")
   const [settings] = useLocalStorage<{
     notifications: boolean
     autoSave: boolean
@@ -94,41 +76,15 @@ export default function KanbanBoard() {
     onConfirm: () => {},
   })
 
-  const availableServices = useMemo(() => {
-    if (!tasks || !services) return ["全部服务"]
-    
-    const taskServiceIds = [...new Set(tasks.map((task) => task.serviceId))]
-    const taskServiceNames = taskServiceIds.map(serviceId => 
-      services.find(s => s.id === serviceId)?.name || "未知服务"
-    )
-    const managedServices = services.map((service) => service.name)
-    const allServices = [...new Set([...taskServiceNames, ...managedServices])]
-    return ["全部服务", ...allServices.sort()]
-  }, [tasks, services])
-
   const assignees = useMemo(() => {
     if (!tasks) return []
     return [...new Set(tasks.map((task) => task.assignee?.name).filter(Boolean))] as string[]
   }, [tasks])
 
-  const taskCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
-    if (!tasks) return counts
-    tasks.forEach((task) => {
-      const service = services?.find(s => s.id === task.serviceId)
-      const serviceName = service?.name || "未知服务"
-      counts[serviceName] = (counts[serviceName] || 0) + 1
-    })
-    return counts
-  }, [tasks, services])
-
   const filteredTasks = useMemo(() => {
     if (!tasks) return []
     
-    let filtered = selectedService === "全部服务" ? tasks : tasks.filter((task) => {
-      const service = services?.find(s => s.id === task.serviceId)
-      return service?.name === selectedService
-    })
+    let filtered = tasks
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -148,7 +104,7 @@ export default function KanbanBoard() {
     }
 
     return filtered
-  }, [tasks, selectedService, searchTerm, selectedPriority, selectedAssignee])
+  }, [tasks, searchTerm, selectedPriority, selectedAssignee])
 
   const getTasksByStatus = (status: string) => {
     return filteredTasks.filter((task) => task.status === status)
@@ -319,21 +275,7 @@ export default function KanbanBoard() {
         <header className="border-b bg-card flex-shrink-0">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-foreground">需求管理</h1>
-              <div className="flex items-center gap-2">
-                <select
-                  value={selectedService}
-                  onChange={(e) => setSelectedService(e.target.value)}
-                  className="border border-border rounded-md px-3 py-1 text-sm bg-background"
-                >
-                  {availableServices.map((service) => (
-                    <option key={service} value={service}>
-                      {service}
-                      {service !== "全部服务" && taskCounts[service] ? ` (${taskCounts[service]})` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <h1 className="text-2xl font-bold text-foreground">任务管理</h1>
             </div>
             <div className="flex items-center gap-2">
               {selectedTasks.length > 0 && (
@@ -350,8 +292,6 @@ export default function KanbanBoard() {
               )}
               <CreateTaskDialog
                 onCreateTask={handleCreateTask}
-                services={services || []}
-                projects={projects || []}
               />
             </div>
           </div>
@@ -383,12 +323,10 @@ export default function KanbanBoard() {
                 </div>
                 <h3 className="text-lg font-medium text-foreground mb-2">暂无任务</h3>
                 <p className="text-muted-foreground mb-6">
-                  开始创建您的第一个任务来管理项目需求。您可以创建任务、设置优先级、分配负责人等。
+                  开始创建您的第一个任务来管理项目。您可以创建任务、设置优先级、分配负责人等。
                 </p>
                 <CreateTaskDialog
                   onCreateTask={handleCreateTask}
-                  services={services || []}
-                  projects={projects || []}
                 />
               </div>
             </div>
@@ -438,8 +376,6 @@ export default function KanbanBoard() {
                           task={task}
                           onUpdate={handleUpdateTask}
                           onDelete={handleDeleteTask}
-                          services={services || []}
-                          projects={projects || []}
                           isDragging={draggedTaskId === task.id}
                           compactView={settings.compactView}
                           showAssigneeAvatars={settings.showAssigneeAvatars}

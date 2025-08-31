@@ -37,9 +37,8 @@ interface Task {
     name: string
     avatar?: string
   }
-  serviceId: string
-  projectId: string
   labels: string[]
+  jiraUrl?: string
   serviceBranches?: ServiceBranch[]
   createdAt?: string
   updatedAt?: string
@@ -59,27 +58,13 @@ interface ServiceBranch {
   masterMergeDate?: string
 }
 
-interface Service {
-  id: string
-  name: string
-  description: string
-  repository: string
-  status: "healthy" | "warning" | "error" | "maintenance"
-  owner: string
-  techStack: string[]
-  dependencies: string[]
-  taskCount: number
-  lastDeployment: string
-  version: string
-}
 
-export default function RequirementDetailPage() {
+export default function TaskDetailPage() {
   const params = useParams()
   const router = useRouter()
   const taskId = params.id as string
 
   const [tasks, setTasks] = useLocalStorage<Task[]>("kanban-tasks", [])
-  const [services] = useLocalStorage<Service[]>("kanban-services", [])
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task | null>(null)
   const [mergingBranches, setMergingBranches] = useState<Set<string>>(new Set())
@@ -124,8 +109,8 @@ export default function RequirementDetailPage() {
     setTasks(updatedTasks)
     setIsEditing(false)
     toast({
-      title: "需求更新成功",
-      description: `需求 "${editedTask.title}" 已更新`,
+      title: "任务更新成功",
+      description: `任务 "${editedTask.title}" 已更新`,
     })
   }
 
@@ -139,7 +124,7 @@ export default function RequirementDetailPage() {
 
     const newBranch: ServiceBranch = {
       id: Date.now().toString(),
-      serviceName: services[0]?.name || "默认服务",
+      serviceName: "默认服务",
       branchName: `feature/${editedTask.title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
       status: "active",
       createdAt: new Date().toISOString(),
@@ -194,7 +179,7 @@ export default function RequirementDetailPage() {
         `[${editedTask.title}] Merge to test branch`,
         branch.branchName,
         "test",
-        `自动创建的Pull Request\n\n需求: ${editedTask.title}\n描述: ${editedTask.description}`,
+        `自动创建的Pull Request\n\n任务: ${editedTask.title}\n描述: ${editedTask.description}`,
       )
 
       setEditedTask({
@@ -245,7 +230,7 @@ export default function RequirementDetailPage() {
         `[${editedTask.title}] Merge to master branch`,
         branch.branchName,
         "master",
-        `自动创建的Pull Request\n\n需求: ${editedTask.title}\n描述: ${editedTask.description}\n\n已通过测试分支验证`,
+        `自动创建的Pull Request\n\n任务: ${editedTask.title}\n描述: ${editedTask.description}\n\n已通过测试分支验证`,
       )
 
       setEditedTask({
@@ -350,11 +335,11 @@ export default function RequirementDetailPage() {
       <MainLayout>
         <div className="flex flex-col items-center justify-center h-full text-center">
           <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">需求不存在</h3>
-          <p className="text-muted-foreground mb-4">找不到指定的需求信息</p>
-          <Button onClick={() => router.push("/requirements")}>
+          <h3 className="text-lg font-semibold mb-2">任务不存在</h3>
+          <p className="text-muted-foreground mb-4">找不到指定的任务信息</p>
+          <Button onClick={() => router.push("/tasks")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            返回需求列表
+            返回任务列表
           </Button>
         </div>
       </MainLayout>
@@ -367,14 +352,14 @@ export default function RequirementDetailPage() {
         <header className="border-b bg-card flex-shrink-0">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => router.push("/requirements")}>
+              <Button variant="ghost" onClick={() => router.push("/tasks")}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 返回
               </Button>
               <div className="flex items-center gap-2">
                 <FileText className="h-6 w-6 text-primary" />
                 <div>
-                  <h1 className="text-xl font-bold text-foreground">需求详情</h1>
+                  <h1 className="text-xl font-bold text-foreground">任务详情</h1>
                   <p className="text-sm text-muted-foreground">ID: {task.id}</p>
                 </div>
               </div>
@@ -410,7 +395,7 @@ export default function RequirementDetailPage() {
                     {isEditing ? (
                       <div className="space-y-4">
                         <div>
-                          <Label htmlFor="title">需求标题</Label>
+                          <Label htmlFor="title">任务标题</Label>
                           <Input
                             id="title"
                             value={editedTask?.title || ""}
@@ -420,7 +405,7 @@ export default function RequirementDetailPage() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="description">需求描述</Label>
+                          <Label htmlFor="description">任务描述</Label>
                           <Textarea
                             id="description"
                             value={editedTask?.description || ""}
@@ -457,11 +442,6 @@ export default function RequirementDetailPage() {
                       <span className="font-medium">{task.assignee.name}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2">
-                    <Server className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">主服务:</span>
-                    <span className="font-medium">{services.find(s => s.id === task.serviceId)?.name || '未知服务'}</span>
-                  </div>
                   {task.createdAt && (
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -501,7 +481,7 @@ export default function RequirementDetailPage() {
                       <GitBranch className="h-5 w-5" />
                       服务分支
                     </CardTitle>
-                    <CardDescription>管理与此需求关联的多个服务分支</CardDescription>
+                    <CardDescription>管理与此任务关联的多个服务分支</CardDescription>
                   </div>
                   {isEditing && (
                     <Button onClick={handleAddServiceBranch} size="sm">
@@ -534,11 +514,7 @@ export default function RequirementDetailPage() {
                                     }
                                     className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background"
                                   >
-                                    {services.map((service) => (
-                                      <option key={service.id} value={service.name}>
-                                        {service.name}
-                                      </option>
-                                    ))}
+                                      <option value="默认服务">默认服务</option>
                                   </select>
                                 </div>
                                 <div>

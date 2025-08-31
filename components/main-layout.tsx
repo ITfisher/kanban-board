@@ -15,8 +15,6 @@ interface Task {
     avatar?: string
   }
   gitBranch?: string
-  projectId: string
-  serviceId: string
   labels: string[]
 }
 
@@ -26,14 +24,8 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const [tasks] = useLocalStorage<Task[]>("kanban-tasks", [])
-  const [services] = useLocalStorage<any[]>("kanban-services", [])
 
-  const taskCounts = tasks.reduce((counts: Record<string, number>, task) => {
-    const service = services.find(s => s.id === task.serviceId)
-    const serviceName = service?.name || "未知服务"
-    counts[serviceName] = (counts[serviceName] || 0) + 1
-    return counts
-  }, {})
+  const taskCounts = { "全部任务": tasks.length }
 
   return (
     <>

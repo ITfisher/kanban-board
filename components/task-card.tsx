@@ -34,35 +34,22 @@ interface Task {
     name: string
     avatar?: string
   }
-  projectId: string
-  serviceId: string
   labels: string[]
+  jiraUrl?: string
   serviceBranches?: ServiceBranch[]
 }
 
-interface Service {
-  id: string
-  name: string
-  projectId: string
-}
-
-interface Project {
-  id: string
-  name: string
-}
 
 interface TaskCardProps {
   task: Task
   onUpdate: (task: Task) => void
   onDelete: (taskId: string) => void
-  services: Service[]
-  projects: Project[]
   isDragging?: boolean
   compactView?: boolean
   showAssigneeAvatars?: boolean
 }
 
-export function TaskCard({ task, onUpdate, onDelete, services, projects, isDragging = false, compactView = false, showAssigneeAvatars = true }: TaskCardProps) {
+export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compactView = false, showAssigneeAvatars = true }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task>(task)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
@@ -106,7 +93,7 @@ export function TaskCard({ task, onUpdate, onDelete, services, projects, isDragg
   const handleAddServiceBranch = () => {
     const newBranch: ServiceBranch = {
       id: Date.now().toString(),
-      serviceName: services[0]?.name || "默认服务",
+      serviceName: "默认服务",
       branchName: `feature/${editedTask.title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
       status: "active",
       createdAt: new Date().toISOString(),
@@ -183,24 +170,6 @@ export function TaskCard({ task, onUpdate, onDelete, services, projects, isDragg
               </Select>
             </div>
 
-            <div>
-              <Label className="text-xs">主服务</Label>
-              <Select
-                value={editedTask.serviceId}
-                onValueChange={(value) => setEditedTask({ ...editedTask, serviceId: value })}
-              >
-                <SelectTrigger className="h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
-                      {service.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           <div className="space-y-2">
@@ -230,11 +199,7 @@ export function TaskCard({ task, onUpdate, onDelete, services, projects, isDragg
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {services.map((service) => (
-                            <SelectItem key={service.id} value={service.name}>
-                              {service.name}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="默认服务">默认服务</SelectItem>
                         </SelectContent>
                       </Select>
                       <Select
@@ -332,9 +297,6 @@ export function TaskCard({ task, onUpdate, onDelete, services, projects, isDragg
 
           <div className={compactView ? "space-y-1" : "space-y-2"}>
             <div className="flex items-center justify-between">
-              <Badge variant="outline" className={compactView ? "text-xs px-1 py-0 h-4" : "text-xs"}>
-                {services.find(s => s.id === task.serviceId)?.name || "未知服务"}
-              </Badge>
               <Badge className={`${compactView ? "text-xs px-1 py-0 h-4" : "text-xs"} ${getPriorityColor(task.priority)}`}>
                 {task.priority === "high" ? "高" : task.priority === "medium" ? "中" : "低"}
               </Badge>
@@ -405,8 +367,7 @@ export function TaskCard({ task, onUpdate, onDelete, services, projects, isDragg
         task={task} 
         open={showDetailDialog} 
         onOpenChange={setShowDetailDialog}
-        services={services}
-        projects={projects}
+        onUpdateTask={onUpdate}
       />
     </>
   )

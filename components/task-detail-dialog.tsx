@@ -1,10 +1,16 @@
 "use client"
+import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { GitBranch, Calendar, User, Tag, ExternalLink, Eye } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { GitBranch, Calendar, User, Tag, ExternalLink, Eye, Plus } from "lucide-react"
 import Link from "next/link"
+import { useLocalStorage } from "@/hooks/use-local-storage"
+import { toast } from "@/hooks/use-toast"
 
 interface ServiceBranch {
   id: string
@@ -26,33 +32,79 @@ interface Task {
     name: string
     avatar?: string
   }
-  projectId: string
-  serviceId: string
   labels: string[]
+  jiraUrl?: string
+  serviceId?: string
   serviceBranches?: ServiceBranch[]
 }
 
 interface Service {
   id: string
   name: string
-  projectId: string
-}
-
-interface Project {
-  id: string
-  name: string
+  description: string
+  repository: string
+  status: "healthy" | "warning" | "error" | "maintenance"
+  techStack: string[]
+  dependencies: string[]
+  testBranch: string
+  masterBranch: string
 }
 
 interface TaskDetailDialogProps {
   task: Task | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  services?: Service[]
-  projects?: Project[]
+  onUpdateTask?: (task: Task) => void
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange, services, projects }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: TaskDetailDialogProps) {
+  const [services] = useLocalStorage<Service[]>("kanban-services", [])
+  const [showCreateBranch, setShowCreateBranch] = useState(false)
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("")
+  const [branchName, setBranchName] = useState<string>(`feature/${task.id}`)
+
   if (!task) return null
+  
+  const handleCreateBranch = () => {
+    if (!selectedServiceId || !branchName.trim()) {
+      toast({
+        title: "创建失败",
+        description: "请选择服务并输入分支名称",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const selectedService = services.find(s => s.id === selectedServiceId)
+    if (!selectedService) return
+
+    const newBranch: ServiceBranch = {
+      id: Date.now().toString(),
+      serviceName: selectedService.name,
+      branchName: branchName,
+      status: "active",
+      createdAt: new Date().toISOString(),
+    }
+
+    const updatedTask: Task = {
+      ...task,
+      serviceBranches: [...(task.serviceBranches || []), newBranch],
+      serviceId: task.serviceId || selectedServiceId
+    }
+
+    if (onUpdateTask) {
+      onUpdateTask(updatedTask)
+    }
+
+    toast({
+      title: "分支创建成功",
+      description: `在 ${selectedService.name} 服务中创建分支 ${branchName}`,
+    })
+
+    setShowCreateBranch(false)
+    setSelectedServiceId("")
+    setBranchName(`feature/${task.id}`)
+  }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -116,12 +168,12 @@ export function TaskDetailDialog({ task, open, onOpenChange, services, projects 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto hide-scrollbar [&>button]:hidden">
         <DialogHeader>
           <div className="relative">
             <DialogTitle className="text-lg font-semibold text-balance leading-tight pr-12">{task.title}</DialogTitle>
             <Button size="sm" variant="ghost" className="absolute top-0 right-0 h-8 w-8 p-0 hover:bg-muted" asChild>
-              <Link href={`/requirements/${task.id}`}>
+              <Link href={`/tasks/${task.id}`}>
                 <Eye className="h-4 w-4" />
                 <span className="sr-only">查看详情页</span>
               </Link>
@@ -157,14 +209,6 @@ export function TaskDetailDialog({ task, open, onOpenChange, services, projects 
             <p className="text-sm text-muted-foreground leading-relaxed">{task.description || "暂无描述"}</p>
           </div>
 
-          {/* 服务信息 */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium">主服务</h3>
-            <Badge variant="outline">
-              {services?.find(s => s.id === task.serviceId)?.name || "未知服务"}
-            </Badge>
-          </div>
-
           {/* 负责人 */}
           {task.assignee && (
             <div className="space-y-2">
@@ -182,13 +226,101 @@ export function TaskDetailDialog({ task, open, onOpenChange, services, projects 
             </div>
           )}
 
+          {/* JIRA链接 */}
+          {task.jiraUrl && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">JIRA需求</span>
+              </div>
+              <Button size="sm" variant="outline" className="h-7 text-xs bg-transparent" asChild>
+                <a href={task.jiraUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  查看JIRA需求
+                </a>
+              </Button>
+            </div>
+          )}
+
           {/* 服务分支 */}
-          {task.serviceBranches && task.serviceBranches.length > 0 && (
-            <div className="space-y-3">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <GitBranch className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">服务分支</span>
               </div>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setShowCreateBranch(!showCreateBranch)}
+                className="h-7 text-xs"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                创建分支
+              </Button>
+            </div>
+
+
+            {/* 创建分支表单 */}
+            {showCreateBranch && (
+              <div className="border rounded-lg p-4 space-y-3 bg-muted/20">
+                <h4 className="text-sm font-medium">创建新分支</h4>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="service-select" className="text-xs">选择服务</Label>
+                    <Select 
+                      value={selectedServiceId} 
+                      onValueChange={setSelectedServiceId}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="选择一个服务" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {services.map((service) => (
+                          <SelectItem key={service.id} value={service.id} className="text-xs">
+                            {service.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="branch-name" className="text-xs">分支名称</Label>
+                    <Input
+                      id="branch-name"
+                      placeholder={`feature/${task.id}`}
+                      value={branchName}
+                      onChange={(e) => setBranchName(e.target.value)}
+                      className="h-8 text-xs font-mono"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      onClick={handleCreateBranch}
+                      className="h-7 text-xs"
+                    >
+                      创建
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowCreateBranch(false)
+                        setSelectedServiceId("")
+                        setBranchName(`feature/${task.id}`)
+                      }}
+                      className="h-7 text-xs"
+                    >
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 现有分支列表 */}
+            {task.serviceBranches && task.serviceBranches.length > 0 && (
               <div className="space-y-2">
                 {task.serviceBranches.map((branch) => (
                   <div key={branch.id} className="border rounded-lg p-3 space-y-2">
@@ -220,32 +352,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, services, projects 
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-
-          {/* 标签 */}
-          {task.labels.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">标签</h3>
-              <div className="flex flex-wrap gap-1">
-                {task.labels.map((label) => (
-                  <Badge key={label} variant="secondary" className="text-xs">
-                    {label}
-                  </Badge>
-                ))}
+            {!task.serviceBranches?.length && (
+              <div className="text-center py-4 text-muted-foreground text-sm">
+                暂无服务分支
               </div>
-            </div>
-          )}
-
-          {/* 操作按钮 */}
-          <div className="flex gap-2 pt-4 border-t">
-            <Button asChild className="flex-1">
-              <Link href={`/requirements/${task.id}`}>查看完整详情</Link>
-            </Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              关闭
-            </Button>
+            )}
           </div>
         </div>
       </DialogContent>

@@ -15,7 +15,6 @@ interface Service {
   description: string
   repository: string
   status: "healthy" | "warning" | "error" | "maintenance"
-  projectId: string
   techStack: string[]
   dependencies: string[]
   testBranch: string
@@ -33,7 +32,6 @@ interface Task {
     avatar?: string
   }
   gitBranch?: string
-  projectId: string
   serviceId: string
   labels: string[]
 }
@@ -41,7 +39,6 @@ interface Task {
 export default function ServicesPage() {
   const [services, setServices] = useLocalStorage<Service[]>("kanban-services", [])
   const [tasks] = useLocalStorage<Task[]>("kanban-tasks", [])
-  const [projects] = useLocalStorage<any[]>("kanban-projects", [])
   const [showAddDialog, setShowAddDialog] = useState(false)
 
   const getServiceTaskCount = (serviceId: string) => {
@@ -182,7 +179,6 @@ export default function ServicesPage() {
             onClose={() => setShowAddDialog(false)}
             onAddService={handleAddService}
             existingServices={services}
-            projects={projects || []}
           />
         )}
       </div>
