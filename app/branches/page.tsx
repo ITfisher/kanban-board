@@ -17,7 +17,6 @@ interface Task {
   }
   gitBranch?: string
   service: string
-  labels: string[]
 }
 
 export default function BranchesPage() {

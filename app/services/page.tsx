@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { MainLayout } from "@/components/main-layout"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { Server, Plus, Activity, GitBranch } from "lucide-react"
@@ -14,8 +13,6 @@ interface Service {
   name: string
   description: string
   repository: string
-  status: "healthy" | "warning" | "error" | "maintenance"
-  techStack: string[]
   dependencies: string[]
   testBranch: string
   masterBranch: string
@@ -33,7 +30,6 @@ interface Task {
   }
   gitBranch?: string
   serviceId: string
-  labels: string[]
 }
 
 export default function ServicesPage() {
@@ -45,35 +41,6 @@ export default function ServicesPage() {
     return tasks.filter(task => task.serviceId === serviceId).length
   }
 
-  const getStatusColor = (status: Service["status"]) => {
-    switch (status) {
-      case "healthy":
-        return "bg-green-100 text-green-800"
-      case "warning":
-        return "bg-yellow-100 text-yellow-800"
-      case "error":
-        return "bg-red-100 text-red-800"
-      case "maintenance":
-        return "bg-blue-100 text-blue-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  const getStatusIcon = (status: Service["status"]) => {
-    switch (status) {
-      case "healthy":
-        return "🟢"
-      case "warning":
-        return "🟡"
-      case "error":
-        return "🔴"
-      case "maintenance":
-        return "🔵"
-      default:
-        return "⚪"
-    }
-  }
 
   const handleAddService = (newService: Service) => {
     setServices([...services, newService])
@@ -126,9 +93,6 @@ export default function ServicesPage() {
                           <CardDescription className="text-sm">{service.description}</CardDescription>
                         </div>
                       </div>
-                      <Badge className={getStatusColor(service.status)}>
-                        {getStatusIcon(service.status)} {service.status}
-                      </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -150,16 +114,6 @@ export default function ServicesPage() {
                       </div>
                     </div>
 
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">技术栈:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {service.techStack.map((tech) => (
-                          <Badge key={tech} variant="outline" className="text-xs">
-                            {tech}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
 
                     <div className="pt-2 border-t">
                       <p className="text-xs text-muted-foreground">

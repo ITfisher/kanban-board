@@ -32,7 +32,6 @@ interface Task {
     name: string
     avatar?: string
   }
-  labels: string[]
   jiraUrl?: string
   serviceId?: string
   serviceBranches?: ServiceBranch[]
@@ -104,6 +103,21 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
     setShowCreateBranch(false)
     setSelectedServiceId("")
     setBranchName(`feature/${task.id}`)
+  }
+
+  const handleCopyGitCommand = (branchName: string, serviceName: string) => {
+    // 查找对应的服务配置获取master分支名
+    const service = services.find(s => s.name === serviceName)
+    const masterBranch = service?.masterBranch || 'main'
+    
+    // 单行命令：获取远程信息，智能处理三种场景
+    const command = `git fetch origin && (git checkout ${branchName} 2>/dev/null || (git show-ref --verify --quiet refs/remotes/origin/${branchName} && git checkout -b ${branchName} origin/${branchName} || (git checkout -b ${branchName} origin/${masterBranch} && git push -u origin ${branchName})))`
+
+    navigator.clipboard.writeText(command)
+    toast({
+      title: "已复制Git命令到剪贴板",
+      description: `智能分支切换：本地存在→切换，远程存在→检出，都不存在→创建并推送`,
+    })
   }
 
   const getPriorityColor = (priority: string) => {
@@ -233,6 +247,9 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">JIRA需求</span>
               </div>
+              <div className="text-xs text-muted-foreground font-mono bg-muted/50 rounded px-2 py-1 break-all">
+                {task.jiraUrl}
+              </div>
               <Button size="sm" variant="outline" className="h-7 text-xs bg-transparent" asChild>
                 <a href={task.jiraUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-3 w-3 mr-1" />
@@ -338,7 +355,19 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
                         {new Date(branch.createdAt).toLocaleDateString()}
                       </div>
                     </div>
-                    <div className="font-mono text-sm bg-muted/50 rounded px-2 py-1">{branch.branchName}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-mono text-sm bg-muted/50 rounded px-2 py-1 flex-1">{branch.branchName}</div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCopyGitCommand(branch.branchName, branch.serviceName)}
+                        className="h-6 px-2"
+                        title="复制Git命令：若分支存在则切换，若不存在则从主分支创建"
+                      >
+                        <GitBranch className="h-3 w-3 mr-1" />
+                        复制
+                      </Button>
+                    </div>
                     {branch.pullRequestUrl && (
                       <div className="flex items-center gap-1">
                         <Button size="sm" variant="outline" className="h-6 text-xs bg-transparent" asChild>

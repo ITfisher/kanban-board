@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { GitBranch, Save, X, GripVertical, Plus } from "lucide-react"
 import { TaskDetailDialog } from "./task-detail-dialog"
+import { toast } from "@/hooks/use-toast"
+import { useLocalStorage } from "@/hooks/use-local-storage"
 
 interface ServiceBranch {
   id: string
@@ -34,7 +36,6 @@ interface Task {
     name: string
     avatar?: string
   }
-  labels: string[]
   jiraUrl?: string
   serviceBranches?: ServiceBranch[]
 }
@@ -53,6 +54,7 @@ export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compact
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task>(task)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
+  const [services] = useLocalStorage<any[]>("kanban-services", [])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -118,6 +120,21 @@ export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compact
     setEditedTask({
       ...editedTask,
       serviceBranches: editedTask.serviceBranches?.filter((branch) => branch.id !== branchId),
+    })
+  }
+
+  const handleCopyGitCommand = (branchName: string, serviceName: string) => {
+    // 查找对应的服务配置获取master分支名
+    const service = services.find(s => s.name === serviceName)
+    const masterBranch = service?.masterBranch || 'main'
+    
+    // 单行命令：获取远程信息，智能处理三种场景
+    const command = `git fetch origin && (git checkout ${branchName} 2>/dev/null || (git show-ref --verify --quiet refs/remotes/origin/${branchName} && git checkout -b ${branchName} origin/${branchName} || (git checkout -b ${branchName} origin/${masterBranch} && git push -u origin ${branchName})))`
+
+    navigator.clipboard.writeText(command)
+    toast({
+      title: "已复制Git命令到剪贴板",
+      description: `智能分支切换：本地存在→切换，远程存在→检出，都不存在→创建并推送`,
     })
   }
 
@@ -227,6 +244,15 @@ export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compact
                       />
                       <Button
                         size="sm"
+                        variant="outline"
+                        onClick={() => handleCopyGitCommand(branch.branchName, branch.serviceName)}
+                        className="h-6 w-6 p-0"
+                        title="复制Git命令：若分支存在则切换，若不存在则从主分支创建"
+                      >
+                        <GitBranch className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="ghost"
                         onClick={() => handleDeleteServiceBranch(branch.id)}
                         className="h-6 w-6 p-0 text-destructive"
@@ -334,18 +360,6 @@ export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compact
 
 
             <div className="flex items-center justify-between">
-              <div className="flex gap-1">
-                {!compactView && task.labels.map((label) => (
-                  <Badge key={label} variant="secondary" className="text-xs">
-                    {label}
-                  </Badge>
-                ))}
-                {compactView && task.labels.length > 0 && (
-                  <Badge variant="secondary" className="text-xs px-1 py-0 h-4">
-                    {task.labels.length} 标签
-                  </Badge>
-                )}
-              </div>
 
               {task.assignee && showAssigneeAvatars && (
                 <div className="flex items-center gap-1">

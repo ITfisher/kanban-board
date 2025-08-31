@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Server, GitBranch, Settings, ChevronLeft, ChevronRight, Kanban, FileText, BarChart3 } from "lucide-react"
+import { LayoutDashboard, Server, GitBranch, Settings, ChevronLeft, ChevronRight, Kanban, BarChart3 } from "lucide-react"
 
 interface SidebarProps {
   taskCounts?: Record<string, number>
@@ -36,12 +36,6 @@ const navigation = [
     href: "/tasks",
     icon: Kanban,
     description: "管理项目任务和进度",
-  },
-  {
-    name: "任务详情",
-    href: "/tasks/list",
-    icon: FileText,
-    description: "查看任务详细信息",
   },
   {
     name: "设置",

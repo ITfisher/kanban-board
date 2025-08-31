@@ -23,7 +23,6 @@ interface Task {
     name: string
     avatar?: string
   }
-  labels: string[]
   jiraUrl?: string
 }
 
@@ -90,8 +89,7 @@ export default function KanbanBoard() {
       filtered = filtered.filter(
         (task) =>
           task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          task.labels.some((label) => label.toLowerCase().includes(searchTerm.toLowerCase())),
+          task.description.toLowerCase().includes(searchTerm.toLowerCase()),
       )
     }
 

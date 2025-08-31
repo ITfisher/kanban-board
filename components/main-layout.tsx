@@ -15,7 +15,6 @@ interface Task {
     avatar?: string
   }
   gitBranch?: string
-  labels: string[]
 }
 
 interface MainLayoutProps {

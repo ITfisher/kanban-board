@@ -29,7 +29,6 @@ interface Task {
   }
   gitBranch?: string
   serviceId: string
-  labels: string[]
 }
 
 interface Service {

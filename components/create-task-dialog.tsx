@@ -21,7 +21,6 @@ interface Task {
     name: string
     avatar?: string
   }
-  labels: string[]
   jiraUrl?: string
 }
 
@@ -38,7 +37,6 @@ export function CreateTaskDialog({ onCreateTask, defaultStatus = "backlog" }: Cr
     status: defaultStatus as Task["status"],
     priority: "medium" as Task["priority"],
     assignee: undefined as Task["assignee"],
-    labels: [] as string[],
     jiraUrl: "",
   })
 
@@ -49,7 +47,6 @@ export function CreateTaskDialog({ onCreateTask, defaultStatus = "backlog" }: Cr
     const taskToCreate = {
       ...newTask,
       assignee: newTask.assignee?.name ? newTask.assignee : undefined,
-      labels: newTask.title.includes("前端") ? ["前端"] : newTask.title.includes("后端") ? ["后端"] : ["开发"],
       jiraUrl: newTask.jiraUrl.trim() || undefined,
       createdAt: new Date().toISOString(),
     }
@@ -61,7 +58,6 @@ export function CreateTaskDialog({ onCreateTask, defaultStatus = "backlog" }: Cr
       status: defaultStatus as Task["status"],
       priority: "medium",
       assignee: undefined,
-      labels: [],
       jiraUrl: "",
     })
     setOpen(false)

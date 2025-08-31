@@ -12,11 +12,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import {
-  FileText,
   Edit,
   Save,
   X,
-  ArrowLeft,
   User,
   Calendar,
   GitBranch,
@@ -37,7 +35,6 @@ interface Task {
     name: string
     avatar?: string
   }
-  labels: string[]
   jiraUrl?: string
   serviceBranches?: ServiceBranch[]
   createdAt?: string
@@ -48,7 +45,6 @@ interface ServiceBranch {
   id: string
   serviceName: string
   branchName: string
-  status: "active" | "merged" | "closed"
   createdAt: string
   lastCommit?: string
   pullRequestUrl?: string
@@ -65,6 +61,7 @@ export default function TaskDetailPage() {
   const taskId = params.id as string
 
   const [tasks, setTasks] = useLocalStorage<Task[]>("kanban-tasks", [])
+  const [services] = useLocalStorage<any[]>("kanban-services", [])
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task | null>(null)
   const [mergingBranches, setMergingBranches] = useState<Set<string>>(new Set())
@@ -126,7 +123,6 @@ export default function TaskDetailPage() {
       id: Date.now().toString(),
       serviceName: "默认服务",
       branchName: `feature/${editedTask.title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
-      status: "active",
       createdAt: new Date().toISOString(),
     }
 
@@ -156,12 +152,18 @@ export default function TaskDetailPage() {
     })
   }
 
-  const handleCopyGitCommand = (branchName: string) => {
-    const command = `git checkout -b ${branchName}`
+  const handleCopyGitCommand = (branchName: string, serviceName: string) => {
+    // 查找对应的服务配置获取master分支名
+    const service = services.find(s => s.name === serviceName)
+    const masterBranch = service?.masterBranch || 'main'
+    
+    // 单行命令：获取远程信息，智能处理三种场景
+    const command = `git fetch origin && (git checkout ${branchName} 2>/dev/null || (git show-ref --verify --quiet refs/remotes/origin/${branchName} && git checkout -b ${branchName} origin/${branchName} || (git checkout -b ${branchName} origin/${masterBranch} && git push -u origin ${branchName})))`
+
     navigator.clipboard.writeText(command)
     toast({
-      title: "已复制到剪贴板",
-      description: `Git命令: ${command}`,
+      title: "已复制Git命令到剪贴板",
+      description: `智能分支切换：本地存在→切换，远程存在→检出，都不存在→创建并推送`,
     })
   }
 
@@ -176,10 +178,10 @@ export default function TaskDetailPage() {
     try {
       const pullRequest = await createPullRequest(
         branch.serviceName,
-        `[${editedTask.title}] Merge to test branch`,
+        `[${editedTask.title}] Deploy to Test Environment`,
         branch.branchName,
         "test",
-        `自动创建的Pull Request\n\n任务: ${editedTask.title}\n描述: ${editedTask.description}`,
+        `自动创建的Pull Request - 部署测试环境\n\n任务: ${editedTask.title}\n描述: ${editedTask.description}\n\n请审核并合并此分支到测试环境。`,
       )
 
       setEditedTask({
@@ -197,13 +199,13 @@ export default function TaskDetailPage() {
       })
 
       toast({
-        title: "Pull Request 创建成功",
-        description: `已创建合并到测试分支的 Pull Request: #${pullRequest.number}`,
+        title: "测试环境部署 PR 创建成功",
+        description: `已创建部署到测试环境的 Pull Request: #${pullRequest.number}`,
       })
     } catch (error) {
       console.error("Failed to create pull request:", error)
       toast({
-        title: "创建 Pull Request 失败",
+        title: "创建部署 PR 失败",
         description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
@@ -227,10 +229,10 @@ export default function TaskDetailPage() {
     try {
       const pullRequest = await createPullRequest(
         branch.serviceName,
-        `[${editedTask.title}] Merge to master branch`,
+        `[${editedTask.title}] Deploy to Production Environment`,
         branch.branchName,
         "master",
-        `自动创建的Pull Request\n\n任务: ${editedTask.title}\n描述: ${editedTask.description}\n\n已通过测试分支验证`,
+        `自动创建的Pull Request - 部署线上环境\n\n任务: ${editedTask.title}\n描述: ${editedTask.description}\n\n已通过测试环境验证，请审核并部署到线上环境。`,
       )
 
       setEditedTask({
@@ -248,13 +250,13 @@ export default function TaskDetailPage() {
       })
 
       toast({
-        title: "Pull Request 创建成功",
-        description: `已创建合并到主分支的 Pull Request: #${pullRequest.number}`,
+        title: "线上环境部署 PR 创建成功",
+        description: `已创建部署到线上环境的 Pull Request: #${pullRequest.number}`,
       })
     } catch (error) {
       console.error("Failed to create pull request:", error)
       toast({
-        title: "创建 Pull Request 失败",
+        title: "创建部署 PR 失败",
         description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
@@ -297,18 +299,6 @@ export default function TaskDetailPage() {
     }
   }
 
-  const getBranchStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-800"
-      case "merged":
-        return "bg-blue-100 text-blue-800"
-      case "closed":
-        return "bg-gray-100 text-gray-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
 
   const statusLabels = {
     backlog: "待规划",
@@ -324,21 +314,14 @@ export default function TaskDetailPage() {
     low: "低优先级",
   }
 
-  const branchStatusLabels = {
-    active: "活跃",
-    merged: "已合并",
-    closed: "已关闭",
-  }
 
   if (!task) {
     return (
       <MainLayout>
         <div className="flex flex-col items-center justify-center h-full text-center">
-          <FileText className="h-16 w-16 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">任务不存在</h3>
           <p className="text-muted-foreground mb-4">找不到指定的任务信息</p>
           <Button onClick={() => router.push("/tasks")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
             返回任务列表
           </Button>
         </div>
@@ -350,20 +333,7 @@ export default function TaskDetailPage() {
     <MainLayout>
       <div className="flex flex-col h-full bg-background">
         <header className="border-b bg-card flex-shrink-0">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => router.push("/tasks")}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                返回
-              </Button>
-              <div className="flex items-center gap-2">
-                <FileText className="h-6 w-6 text-primary" />
-                <div>
-                  <h1 className="text-xl font-bold text-foreground">任务详情</h1>
-                  <p className="text-sm text-muted-foreground">ID: {task.id}</p>
-                </div>
-              </div>
-            </div>
+          <div className="flex items-center justify-end px-6 py-4">
             <div className="flex items-center gap-2">
               {isEditing ? (
                 <>
@@ -458,18 +428,6 @@ export default function TaskDetailPage() {
                   )}
                 </div>
 
-                {task.labels.length > 0 && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">标签:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {task.labels.map((label) => (
-                        <Badge key={label} variant="outline" className="text-xs">
-                          {label}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
@@ -527,22 +485,6 @@ export default function TaskDetailPage() {
                                   />
                                 </div>
                                 <div>
-                                  <Label>状态</Label>
-                                  <select
-                                    value={branch.status}
-                                    onChange={(e) =>
-                                      handleUpdateServiceBranch(branch.id, {
-                                        status: e.target.value as ServiceBranch["status"],
-                                      })
-                                    }
-                                    className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background"
-                                  >
-                                    <option value="active">活跃</option>
-                                    <option value="merged">已合并</option>
-                                    <option value="closed">已关闭</option>
-                                  </select>
-                                </div>
-                                <div>
                                   <Label>Pull Request URL</Label>
                                   <Input
                                     value={branch.pullRequestUrl || ""}
@@ -557,17 +499,14 @@ export default function TaskDetailPage() {
                               <>
                                 <div className="flex items-center gap-2 mb-2">
                                   <h4 className="font-medium">{branch.serviceName}</h4>
-                                  <Badge className={getBranchStatusColor(branch.status)}>
-                                    {branchStatusLabels[branch.status as keyof typeof branchStatusLabels]}
-                                  </Badge>
                                   {branch.mergedToTest && (
                                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                      已合并测试
+                                      🟢 已部署测试环境
                                     </Badge>
                                   )}
                                   {branch.mergedToMaster && (
                                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                      已合并主分支
+                                      🔴 已部署线上环境
                                     </Badge>
                                   )}
                                 </div>
@@ -579,63 +518,102 @@ export default function TaskDetailPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleCopyGitCommand(branch.branchName)}
+                                    onClick={() => handleCopyGitCommand(branch.branchName, branch.serviceName)}
                                     className="h-7 px-2"
+                                    title="复制Git命令：若分支存在则切换，若不存在则从主分支创建"
                                   >
                                     <GitBranch className="h-3 w-3 mr-1" />
-                                    复制
+                                    复制Git命令
                                   </Button>
                                 </div>
 
-                                <div className="flex items-center gap-2 mb-2">
-                                  {!branch.mergedToTest && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleMergeToTest(branch.id)}
-                                      disabled={mergingBranches.has(branch.id)}
-                                      className="h-7 text-xs"
-                                    >
-                                      {mergingBranches.has(branch.id) ? (
-                                        <>
-                                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                          创建中...
-                                        </>
-                                      ) : (
-                                        "创建测试分支 PR"
+                                {/* 部署状态和操作 */}
+                                <div className="space-y-3">
+                                  {/* 测试环境部分 */}
+                                  <div className="border rounded-lg p-3 bg-blue-50/50">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-blue-800">🟦 测试环境</span>
+                                        {branch.mergedToTest && (
+                                          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 text-xs">
+                                            ✓ 已部署
+                                          </Badge>
+                                        )}
+                                        {!branch.mergedToTest && (
+                                          <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300 text-xs">
+                                            ✗ 未部署
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      {!branch.mergedToTest && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleMergeToTest(branch.id)}
+                                          disabled={mergingBranches.has(branch.id)}
+                                          className="h-7 text-xs bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+                                        >
+                                          {mergingBranches.has(branch.id) ? (
+                                            <>
+                                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                              部署中...
+                                            </>
+                                          ) : (
+                                            "🚀 部署测试环境"
+                                          )}
+                                        </Button>
                                       )}
-                                    </Button>
-                                  )}
-                                  {!branch.mergedToMaster && branch.mergedToTest && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleMergeToMaster(branch.id)}
-                                      disabled={mergingBranches.has(branch.id)}
-                                      className="h-7 text-xs"
-                                    >
-                                      {mergingBranches.has(branch.id) ? (
-                                        <>
-                                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                          创建中...
-                                        </>
-                                      ) : (
-                                        "创建主分支 PR"
-                                      )}
-                                    </Button>
-                                  )}
-                                </div>
-
-                                {(branch.mergedToTest || branch.mergedToMaster) && (
-                                  <div className="text-xs text-muted-foreground space-y-1">
+                                    </div>
                                     {branch.mergedToTest && branch.testMergeDate && (
-                                      <div>测试分支合并时间: {new Date(branch.testMergeDate).toLocaleString()}</div>
-                                    )}
-                                    {branch.mergedToMaster && branch.masterMergeDate && (
-                                      <div>主分支合并时间: {new Date(branch.masterMergeDate).toLocaleString()}</div>
+                                      <div className="text-xs text-blue-700">
+                                        部署时间: {new Date(branch.testMergeDate).toLocaleString()}
+                                      </div>
                                     )}
                                   </div>
-                                )}
+
+                                  {/* 线上环境部分 */}
+                                  <div className="border rounded-lg p-3 bg-green-50/50">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-green-800">🔴 线上环境</span>
+                                        {branch.mergedToMaster && (
+                                          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 text-xs">
+                                            ✓ 已部署
+                                          </Badge>
+                                        )}
+                                        {!branch.mergedToMaster && (
+                                          <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300 text-xs">
+                                            ✗ 未部署
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      {!branch.mergedToMaster && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleMergeToMaster(branch.id)}
+                                          disabled={mergingBranches.has(branch.id)}
+                                          className="h-7 text-xs bg-green-600 text-white hover:bg-green-700 border-green-600"
+                                        >
+                                          {mergingBranches.has(branch.id) ? (
+                                            <>
+                                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                              部署中...
+                                            </>
+                                          ) : (
+                                            "🚀 部署线上环境"
+                                          )}
+                                        </Button>
+                                      )}
+                                    </div>
+                                    {branch.mergedToMaster && branch.masterMergeDate && (
+                                      <div className="text-xs text-green-700">
+                                        部署时间: {new Date(branch.masterMergeDate).toLocaleString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
                               </>
                             )}
                           </div>
