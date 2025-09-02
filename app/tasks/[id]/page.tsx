@@ -499,6 +499,13 @@ export default function TaskDetailPage() {
                               <>
                                 <div className="flex items-center gap-2 mb-2">
                                   <h4 className="font-medium">{branch.serviceName}</h4>
+                                  <a
+                                    href={`/branches?service=${encodeURIComponent(branch.serviceName)}`}
+                                    className="text-primary hover:text-primary/80 transition-colors"
+                                    title="查看服务分支"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
                                   {branch.mergedToTest && (
                                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                                       🟢 已部署测试环境

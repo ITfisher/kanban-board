@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { GitBranch, Calendar, User, Tag, ExternalLink, Eye, Plus } from "lucide-react"
+import { GitBranch, Calendar, User, Tag, ExternalLink, Plus } from "lucide-react"
 import Link from "next/link"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { toast } from "@/hooks/use-toast"
@@ -188,7 +188,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
             <DialogTitle className="text-lg font-semibold text-balance leading-tight pr-12">{task.title}</DialogTitle>
             <Button size="sm" variant="ghost" className="absolute top-0 right-0 h-8 w-8 p-0 hover:bg-muted" asChild>
               <Link href={`/tasks/${task.id}`}>
-                <Eye className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4" />
                 <span className="sr-only">查看详情页</span>
               </Link>
             </Button>
@@ -346,6 +346,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
                         <Badge variant="outline" className="text-xs">
                           {branch.serviceName}
                         </Badge>
+                        <a
+                          href={`/branches?service=${encodeURIComponent(branch.serviceName)}`}
+                          className="text-primary hover:text-primary/80 transition-colors"
+                          title="查看服务分支"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
                         <Badge className={`text-xs ${getBranchStatusColor(branch.status)}`}>
                           {branch.status === "active" ? "活跃" : branch.status === "merged" ? "已合并" : "已关闭"}
                         </Badge>
