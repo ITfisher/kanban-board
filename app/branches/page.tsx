@@ -126,64 +126,64 @@ export default function BranchesPage() {
   }
 
   const handleMergeToTest = async (branch: ServiceBranch) => {
-    setMergingBranches(prev => new Set(prev).add(branch.id))
+    const mergeId = `${branch.id}-test`
+    setMergingBranches(prev => new Set(prev).add(mergeId))
 
     try {
       const pullRequest = await createPullRequest(
         branch.serviceName,
-        `[${branch.taskTitle}] Deploy to Test Environment`,
+        `[TEST][${branch.taskTitle}] Deploy to Test Environment`,
         branch.branchName,
         "test",
-        `自动创建的Pull Request - 部署测试环境\n\n任务: ${branch.taskTitle}\n分支: ${branch.branchName}\n\n请审核并合并此分支到测试环境。`
+        `🔄 **测试环境部署 Pull Request**\n\n**任务**: ${branch.taskTitle}\n**分支**: ${branch.branchName}\n**目标**: 测试环境 (test)\n\n⚠️ **注意**: 此PR仅用于测试环境部署，不会影响线上环境。\n\n请审核代码质量和功能完整性后合并到测试环境进行验证。`
       )
 
-      // 这里需要更新 localStorage 中的数据
-      // 由于数据结构复杂，简单起见这里只显示成功消息
       toast({
-        title: "测试环境部署 PR 创建成功",
-        description: `已为分支 ${branch.branchName} 创建部署到测试环境的 Pull Request`,
+        title: "✅ 测试环境 PR 创建成功",
+        description: `已为分支 ${branch.branchName} 创建独立的测试环境 Pull Request`,
       })
     } catch (error) {
       toast({
-        title: "创建部署 PR 失败",
+        title: "❌ 创建测试环境 PR 失败",
         description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
     } finally {
       setMergingBranches(prev => {
         const newSet = new Set(prev)
-        newSet.delete(branch.id)
+        newSet.delete(mergeId)
         return newSet
       })
     }
   }
 
   const handleMergeToMaster = async (branch: ServiceBranch) => {
-    setMergingBranches(prev => new Set(prev).add(branch.id))
+    const mergeId = `${branch.id}-master`
+    setMergingBranches(prev => new Set(prev).add(mergeId))
 
     try {
       const pullRequest = await createPullRequest(
         branch.serviceName,
-        `[${branch.taskTitle}] Deploy to Production Environment`,
+        `[PROD][${branch.taskTitle}] Deploy to Production Environment`,
         branch.branchName,
         "master",
-        `自动创建的Pull Request - 部署线上环境\n\n任务: ${branch.taskTitle}\n分支: ${branch.branchName}\n\n已通过测试环境验证，请审核并部署到线上环境。`
+        `🚀 **线上环境部署 Pull Request**\n\n**任务**: ${branch.taskTitle}\n**分支**: ${branch.branchName}\n**目标**: 线上环境 (master)\n\n✅ **状态**: ${branch.mergedToTest ? '已通过测试环境验证' : '⚠️ 未验证测试环境'}\n\n🔒 **部署要求**:\n- 代码已在测试环境充分验证\n- 功能测试通过\n- 性能测试通过\n- 安全审查通过\n\n⚠️ **重要**: 此为线上环境部署，请仔细审核后合并。`
       )
 
       toast({
-        title: "线上环境部署 PR 创建成功",
-        description: `已为分支 ${branch.branchName} 创建部署到线上环境的 Pull Request`,
+        title: "🚀 线上环境 PR 创建成功", 
+        description: `已为分支 ${branch.branchName} 创建独立的线上环境 Pull Request`,
       })
     } catch (error) {
       toast({
-        title: "创建部署 PR 失败",
+        title: "❌ 创建线上环境 PR 失败",
         description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
     } finally {
       setMergingBranches(prev => {
         const newSet = new Set(prev)
-        newSet.delete(branch.id)
+        newSet.delete(mergeId)
         return newSet
       })
     }
@@ -268,6 +268,17 @@ export default function BranchesPage() {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
+                        {/* 环境独立性提示 */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                          <div className="flex items-center gap-2 text-blue-800 font-medium mb-1">
+                            <AlertCircle className="h-4 w-4" />
+                            环境独立部署
+                          </div>
+                          <p className="text-blue-700 text-xs">
+                            测试环境和线上环境的合并操作完全独立，可以同时进行或分别操作，互不影响。
+                          </p>
+                        </div>
+                        
                         {/* 合并状态展示 */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {/* 测试环境状态 */}
@@ -291,10 +302,10 @@ export default function BranchesPage() {
                                 <Button
                                   size="sm"
                                   onClick={() => handleMergeToTest(branch)}
-                                  disabled={mergingBranches.has(branch.id)}
+                                  disabled={mergingBranches.has(`${branch.id}-test`)}
                                   className="bg-blue-600 hover:bg-blue-700 text-white"
                                 >
-                                  {mergingBranches.has(branch.id) ? (
+                                  {mergingBranches.has(`${branch.id}-test`) ? (
                                     <>
                                       <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                                       创建中...
@@ -336,10 +347,10 @@ export default function BranchesPage() {
                                 <Button
                                   size="sm"
                                   onClick={() => handleMergeToMaster(branch)}
-                                  disabled={mergingBranches.has(branch.id) || !branch.mergedToTest}
+                                  disabled={mergingBranches.has(`${branch.id}-master`) || !branch.mergedToTest}
                                   className="bg-green-600 hover:bg-green-700 text-white"
                                 >
-                                  {mergingBranches.has(branch.id) ? (
+                                  {mergingBranches.has(`${branch.id}-master`) ? (
                                     <>
                                       <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                                       创建中...
@@ -356,7 +367,7 @@ export default function BranchesPage() {
                             {!branch.mergedToTest && (
                               <div className="flex items-center gap-1 text-xs text-amber-600">
                                 <AlertCircle className="h-3 w-3" />
-                                需要先合并到测试环境
+                                建议先在测试环境验证
                               </div>
                             )}
                             {branch.mergedToMaster && branch.masterMergeDate && (

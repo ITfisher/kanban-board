@@ -11,6 +11,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { useLocalStorage } from "@/hooks/use-local-storage"
+import MDEditor from "@uiw/react-md-editor"
+import "@uiw/react-md-editor/markdown-editor.css"
+import "@uiw/react-markdown-preview/markdown.css"
 import {
   Edit,
   Save,
@@ -23,6 +26,7 @@ import {
   Trash2,
   ExternalLink,
   Loader2,
+  HelpCircle,
 } from "lucide-react"
 
 interface Task {
@@ -178,10 +182,10 @@ export default function TaskDetailPage() {
     try {
       const pullRequest = await createPullRequest(
         branch.serviceName,
-        `[${editedTask.title}] Deploy to Test Environment`,
+        `[TEST][${editedTask.title}] Merge to Test Branch`,
         branch.branchName,
         "test",
-        `自动创建的Pull Request - 部署测试环境\n\n任务: ${editedTask.title}\n描述: ${editedTask.description}\n\n请审核并合并此分支到测试环境。`,
+        `🔄 **合并到测试分支 Pull Request**\n\n**任务**: ${editedTask.title}\n**描述**: ${editedTask.description}\n**分支**: ${branch.branchName}\n**目标**: 测试分支 (test)\n\n⚠️ **注意**: 此PR用于将功能分支合并到测试分支，不会影响线上环境。\n\n请审核代码质量和功能完整性后合并到测试分支进行验证。`,
       )
 
       setEditedTask({
@@ -199,13 +203,13 @@ export default function TaskDetailPage() {
       })
 
       toast({
-        title: "测试环境部署 PR 创建成功",
-        description: `已创建部署到测试环境的 Pull Request: #${pullRequest.number}`,
+        title: "✅ 测试分支合并 PR 创建成功",
+        description: `已创建合并到测试分支的 Pull Request: #${pullRequest.number}`,
       })
     } catch (error) {
       console.error("Failed to create pull request:", error)
       toast({
-        title: "创建部署 PR 失败",
+        title: "❌ 创建测试分支合并 PR 失败",
         description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
@@ -229,10 +233,10 @@ export default function TaskDetailPage() {
     try {
       const pullRequest = await createPullRequest(
         branch.serviceName,
-        `[${editedTask.title}] Deploy to Production Environment`,
+        `[PROD][${editedTask.title}] Merge to Master Branch`,
         branch.branchName,
         "master",
-        `自动创建的Pull Request - 部署线上环境\n\n任务: ${editedTask.title}\n描述: ${editedTask.description}\n\n已通过测试环境验证，请审核并部署到线上环境。`,
+        `🚀 **合并到主分支 Pull Request**\n\n**任务**: ${editedTask.title}\n**描述**: ${editedTask.description}\n**分支**: ${branch.branchName}\n**目标**: 主分支 (master)\n\n✅ **状态**: ${branch.mergedToTest ? '已通过测试分支验证' : '⚠️ 未验证测试分支'}\n\n🔒 **合并要求**:\n- 代码已在测试分支充分验证\n- 功能测试通过\n- 性能测试通过\n- 安全审查通过\n\n⚠️ **重要**: 此为主分支合并，请仔细审核后合并。`,
       )
 
       setEditedTask({
@@ -250,13 +254,13 @@ export default function TaskDetailPage() {
       })
 
       toast({
-        title: "线上环境部署 PR 创建成功",
-        description: `已创建部署到线上环境的 Pull Request: #${pullRequest.number}`,
+        title: "🚀 主分支合并 PR 创建成功",
+        description: `已创建合并到主分支的 Pull Request: #${pullRequest.number}`,
       })
     } catch (error) {
       console.error("Failed to create pull request:", error)
       toast({
-        title: "创建部署 PR 失败",
+        title: "❌ 创建主分支合并 PR 失败",
         description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
@@ -375,21 +379,50 @@ export default function TaskDetailPage() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="description">任务描述</Label>
-                          <Textarea
-                            id="description"
-                            value={editedTask?.description || ""}
-                            onChange={(e) =>
-                              setEditedTask(editedTask ? { ...editedTask, description: e.target.value } : null)
-                            }
-                            rows={4}
-                          />
+                          <Label htmlFor="description">
+                            任务描述 
+                            <span className="text-xs text-muted-foreground ml-2">
+                              支持 Markdown 格式
+                            </span>
+                          </Label>
+                          <div className="mt-2">
+                            <MDEditor
+                              value={editedTask?.description || ""}
+                              onChange={(value) =>
+                                setEditedTask(editedTask ? { ...editedTask, description: value || "" } : null)
+                              }
+                              height={350}
+                              data-color-mode="light"
+                              visibleDragBar={false}
+                              preview="live"
+                              hideToolbar={false}
+                              toolbarHeight={40}
+                              textareaProps={{
+                                placeholder: "请输入任务描述，支持 Markdown 格式...\n\n示例:\n# 功能需求\n- 功能点1\n- 功能点2\n\n## 技术要求\n```javascript\n// 代码示例\n```",
+                                style: {
+                                  fontSize: "14px",
+                                  lineHeight: "1.6",
+                                  fontFamily: "inherit",
+                                },
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
                     ) : (
                       <>
                         <CardTitle className="text-2xl mb-2">{task.title}</CardTitle>
-                        <CardDescription className="text-base">{task.description}</CardDescription>
+                        <div className="text-base">
+                          <MDEditor.Markdown 
+                            source={task.description || "暂无描述"} 
+                            style={{ 
+                              whiteSpace: 'pre-wrap',
+                              backgroundColor: 'transparent',
+                              color: 'inherit',
+                              fontSize: 'inherit'
+                            }}
+                          />
+                        </div>
                       </>
                     )}
                   </div>
@@ -508,12 +541,12 @@ export default function TaskDetailPage() {
                                   </a>
                                   {branch.mergedToTest && (
                                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                      🟢 已部署测试环境
+                                      🟢 已合并测试分支
                                     </Badge>
                                   )}
                                   {branch.mergedToMaster && (
                                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                      🔴 已部署线上环境
+                                      🔴 已合并主分支
                                     </Badge>
                                   )}
                                 </div>
@@ -534,21 +567,21 @@ export default function TaskDetailPage() {
                                   </Button>
                                 </div>
 
-                                {/* 部署状态和操作 */}
+                                {/* 合并状态和操作 */}
                                 <div className="space-y-3">
-                                  {/* 测试环境部分 */}
+                                  {/* 测试分支部分 */}
                                   <div className="border rounded-lg p-3 bg-blue-50/50">
                                     <div className="flex items-center justify-between mb-2">
                                       <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-blue-800">🟦 测试环境</span>
+                                        <span className="text-sm font-medium text-blue-800">🟦 测试分支</span>
                                         {branch.mergedToTest && (
                                           <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 text-xs">
-                                            ✓ 已部署
+                                            ✓ 已合并
                                           </Badge>
                                         )}
                                         {!branch.mergedToTest && (
                                           <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300 text-xs">
-                                            ✗ 未部署
+                                            ✗ 未合并
                                           </Badge>
                                         )}
                                       </div>
@@ -563,34 +596,34 @@ export default function TaskDetailPage() {
                                           {mergingBranches.has(branch.id) ? (
                                             <>
                                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                              部署中...
+                                              合并中...
                                             </>
                                           ) : (
-                                            "🚀 部署测试环境"
+                                            "🔄 合并到测试分支"
                                           )}
                                         </Button>
                                       )}
                                     </div>
                                     {branch.mergedToTest && branch.testMergeDate && (
                                       <div className="text-xs text-blue-700">
-                                        部署时间: {new Date(branch.testMergeDate).toLocaleString()}
+                                        合并时间: {new Date(branch.testMergeDate).toLocaleString()}
                                       </div>
                                     )}
                                   </div>
 
-                                  {/* 线上环境部分 */}
+                                  {/* 主分支部分 */}
                                   <div className="border rounded-lg p-3 bg-green-50/50">
                                     <div className="flex items-center justify-between mb-2">
                                       <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-green-800">🔴 线上环境</span>
+                                        <span className="text-sm font-medium text-green-800">🔴 主分支</span>
                                         {branch.mergedToMaster && (
                                           <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 text-xs">
-                                            ✓ 已部署
+                                            ✓ 已合并
                                           </Badge>
                                         )}
                                         {!branch.mergedToMaster && (
                                           <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300 text-xs">
-                                            ✗ 未部署
+                                            ✗ 未合并
                                           </Badge>
                                         )}
                                       </div>
@@ -605,17 +638,17 @@ export default function TaskDetailPage() {
                                           {mergingBranches.has(branch.id) ? (
                                             <>
                                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                              部署中...
+                                              合并中...
                                             </>
                                           ) : (
-                                            "🚀 部署线上环境"
+                                            "🚀 合并到主分支"
                                           )}
                                         </Button>
                                       )}
                                     </div>
                                     {branch.mergedToMaster && branch.masterMergeDate && (
                                       <div className="text-xs text-green-700">
-                                        部署时间: {new Date(branch.masterMergeDate).toLocaleString()}
+                                        合并时间: {new Date(branch.masterMergeDate).toLocaleString()}
                                       </div>
                                     )}
                                   </div>

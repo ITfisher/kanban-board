@@ -5,11 +5,13 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Plus, ExternalLink } from "lucide-react"
+import MDEditor from "@uiw/react-md-editor"
+import "@uiw/react-md-editor/markdown-editor.css"
+import "@uiw/react-markdown-preview/markdown.css"
 
 interface Task {
   id: string
@@ -71,7 +73,7 @@ export function CreateTaskDialog({ onCreateTask, defaultStatus = "backlog" }: Cr
           新建任务
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>创建新任务</DialogTitle>
         </DialogHeader>
@@ -88,14 +90,32 @@ export function CreateTaskDialog({ onCreateTask, defaultStatus = "backlog" }: Cr
           </div>
 
           <div>
-            <Label htmlFor="description">任务描述</Label>
-            <Textarea
-              id="description"
-              value={newTask.description}
-              onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-              placeholder="详细描述任务内容"
-              rows={3}
-            />
+            <Label htmlFor="description">
+              任务描述
+              <span className="text-xs text-muted-foreground ml-2">
+                支持 Markdown 格式
+              </span>
+            </Label>
+            <div className="mt-2">
+              <MDEditor
+                value={newTask.description}
+                onChange={(value) => setNewTask({ ...newTask, description: value || "" })}
+                height={250}
+                data-color-mode="light"
+                visibleDragBar={false}
+                preview="edit"
+                hideToolbar={false}
+                toolbarHeight={35}
+                textareaProps={{
+                  placeholder: "详细描述任务内容，支持 Markdown 格式...\n\n示例:\n## 功能需求\n- [ ] 任务1\n- [ ] 任务2\n\n### 技术要求\n```javascript\n// 代码示例\n```",
+                  style: {
+                    fontSize: "13px",
+                    lineHeight: "1.5",
+                    fontFamily: "inherit",
+                  },
+                }}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
