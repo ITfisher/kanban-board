@@ -66,6 +66,7 @@ export default function TaskDetailPage() {
 
   const [tasks, setTasks] = useLocalStorage<Task[]>("kanban-tasks", [])
   const [services] = useLocalStorage<any[]>("kanban-services", [])
+  const [settings] = useLocalStorage<any>("kanban-settings", { githubConfigs: [] })
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task | null>(null)
   const [mergingBranches, setMergingBranches] = useState<Set<string>>(new Set())
@@ -90,6 +91,7 @@ export default function TaskDetailPage() {
         head,
         base,
         body,
+        githubConfigs: settings.githubConfigs || [],
       }),
     })
 
@@ -177,6 +179,10 @@ export default function TaskDetailPage() {
     const branch = editedTask.serviceBranches?.find((b) => b.id === branchId)
     if (!branch) return
 
+    // 从服务配置中获取测试分支名称
+    const service = services.find(s => s.name === branch.serviceName)
+    const testBranch = service?.testBranch || 'test'
+
     setMergingBranches((prev) => new Set(prev).add(branchId))
 
     try {
@@ -184,8 +190,8 @@ export default function TaskDetailPage() {
         branch.serviceName,
         `[TEST][${editedTask.title}] Merge to Test Branch`,
         branch.branchName,
-        "test",
-        `🔄 **合并到测试分支 Pull Request**\n\n**任务**: ${editedTask.title}\n**描述**: ${editedTask.description}\n**分支**: ${branch.branchName}\n**目标**: 测试分支 (test)\n\n⚠️ **注意**: 此PR用于将功能分支合并到测试分支，不会影响线上环境。\n\n请审核代码质量和功能完整性后合并到测试分支进行验证。`,
+        testBranch,
+        `🔄 **合并到测试分支 Pull Request**\n\n**任务**: ${editedTask.title}\n**描述**: ${editedTask.description}\n**分支**: ${branch.branchName}\n**目标**: 测试分支 (${testBranch})\n\n⚠️ **注意**: 此PR用于将功能分支合并到测试分支，不会影响线上环境。\n\n请审核代码质量和功能完整性后合并到测试分支进行验证。`,
       )
 
       setEditedTask({
@@ -228,6 +234,10 @@ export default function TaskDetailPage() {
     const branch = editedTask.serviceBranches?.find((b) => b.id === branchId)
     if (!branch) return
 
+    // 从服务配置中获取主分支名称
+    const service = services.find(s => s.name === branch.serviceName)
+    const masterBranch = service?.masterBranch || 'master'
+
     setMergingBranches((prev) => new Set(prev).add(branchId))
 
     try {
@@ -235,8 +245,8 @@ export default function TaskDetailPage() {
         branch.serviceName,
         `[PROD][${editedTask.title}] Merge to Master Branch`,
         branch.branchName,
-        "master",
-        `🚀 **合并到主分支 Pull Request**\n\n**任务**: ${editedTask.title}\n**描述**: ${editedTask.description}\n**分支**: ${branch.branchName}\n**目标**: 主分支 (master)\n\n✅ **状态**: ${branch.mergedToTest ? '已通过测试分支验证' : '⚠️ 未验证测试分支'}\n\n🔒 **合并要求**:\n- 代码已在测试分支充分验证\n- 功能测试通过\n- 性能测试通过\n- 安全审查通过\n\n⚠️ **重要**: 此为主分支合并，请仔细审核后合并。`,
+        masterBranch,
+        `🚀 **合并到主分支 Pull Request**\n\n**任务**: ${editedTask.title}\n**描述**: ${editedTask.description}\n**分支**: ${branch.branchName}\n**目标**: 主分支 (${masterBranch})\n\n✅ **状态**: ${branch.mergedToTest ? '已通过测试分支验证' : '⚠️ 未验证测试分支'}\n\n🔒 **合并要求**:\n- 代码已在测试分支充分验证\n- 功能测试通过\n- 性能测试通过\n- 安全审查通过\n\n⚠️ **重要**: 此为主分支合并，请仔细审核后合并。`,
       )
 
       setEditedTask({
@@ -505,7 +515,12 @@ export default function TaskDetailPage() {
                                     }
                                     className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background"
                                   >
-                                      <option value="默认服务">默认服务</option>
+                                    <option value="默认服务">默认服务</option>
+                                    {services.map((service) => (
+                                      <option key={service.id} value={service.name}>
+                                        {service.name}
+                                      </option>
+                                    ))}
                                   </select>
                                 </div>
                                 <div>
