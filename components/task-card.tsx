@@ -54,7 +54,7 @@ export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compact
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task>(task)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
-  const [services] = useLocalStorage<any[]>("kanban-services", [])
+  const [services] = useLocalStorage<Array<{ id: string; name: string }>>("kanban-services", [])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {

@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import MDEditor from "@uiw/react-md-editor"
@@ -21,12 +20,15 @@ import {
   User,
   Calendar,
   GitBranch,
-  Server,
   Plus,
   Trash2,
   ExternalLink,
   Loader2,
-  HelpCircle,
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react"
 
 interface Task {
@@ -56,6 +58,26 @@ interface ServiceBranch {
   mergedToMaster?: boolean
   testMergeDate?: string
   masterMergeDate?: string
+  prStatus?: {
+    number: number
+    state: 'open' | 'closed'
+    merged: boolean
+    mergeable: boolean | null
+    mergeable_state: string
+    merged_at: string | null
+    base_ref: string
+    head_ref: string
+    head_sha: string
+    html_url: string
+    checks?: {
+      state: 'pending' | 'success' | 'failure' | 'error'
+      conclusion: string | null
+      total_count: number
+      completed_count: number
+      failed_count: number
+    }
+  }
+  lastStatusCheck?: string
 }
 
 
@@ -65,11 +87,12 @@ export default function TaskDetailPage() {
   const taskId = params.id as string
 
   const [tasks, setTasks] = useLocalStorage<Task[]>("kanban-tasks", [])
-  const [services] = useLocalStorage<any[]>("kanban-services", [])
-  const [settings] = useLocalStorage<any>("kanban-settings", { githubConfigs: [] })
+  const [services] = useLocalStorage<Array<{ id: string; name: string; testBranch?: string; masterBranch?: string }>>("kanban-services", [])
+  const [settings] = useLocalStorage<{ githubConfigs: Array<{ id: string; name: string; domain: string; owner: string; token: string; isDefault?: boolean }> }>("kanban-settings", { githubConfigs: [] })
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task | null>(null)
   const [mergingBranches, setMergingBranches] = useState<Set<string>>(new Set())
+  const [checkingStatus, setCheckingStatus] = useState<Set<string>>(new Set())
 
   const task = tasks.find((t) => t.id === taskId)
 
@@ -79,7 +102,82 @@ export default function TaskDetailPage() {
     }
   }, [task])
 
+  // 定时检查PR状态
+  useEffect(() => {
+    const checkPRStatus = async () => {
+      if (!task?.serviceBranches) return
+
+      const branchesWithPR = task.serviceBranches.filter(branch => 
+        branch.pullRequestUrl && !branch.mergedToTest && !branch.mergedToMaster
+      )
+
+      if (branchesWithPR.length === 0) return
+
+      for (const branch of branchesWithPR) {
+        try {
+          setCheckingStatus(prev => new Set(prev).add(branch.id))
+          
+          const response = await fetch("/api/github/pr-status", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              serviceName: branch.serviceName,
+              pullRequestUrl: branch.pullRequestUrl,
+              githubConfigs: settings.githubConfigs || [],
+            }),
+          })
+
+          if (response.ok) {
+            const prStatus = await response.json()
+            
+            // 更新本地状态
+            setTasks(prevTasks => 
+              prevTasks.map(t => 
+                t.id === taskId ? {
+                  ...t,
+                  serviceBranches: t.serviceBranches?.map(b => 
+                    b.id === branch.id ? {
+                      ...b,
+                      prStatus,
+                      lastStatusCheck: new Date().toISOString(),
+                      // 如果PR已合并，更新对应状态
+                      mergedToTest: prStatus.merged && prStatus.base_ref.includes('test') ? true : b.mergedToTest,
+                      mergedToMaster: prStatus.merged && (prStatus.base_ref === 'master' || prStatus.base_ref === 'main') ? true : b.mergedToMaster,
+                    } : b
+                  )
+                } : t
+              )
+            )
+          }
+        } catch (error) {
+          console.error("Failed to check PR status:", error)
+        } finally {
+          setCheckingStatus(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(branch.id)
+            return newSet
+          })
+        }
+      }
+    }
+
+    // 立即检查一次
+    checkPRStatus()
+
+    // 设置30秒定时检查
+    const interval = setInterval(checkPRStatus, 30000)
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [task, taskId, settings.githubConfigs, setTasks])
+
   const createPullRequest = async (serviceName: string, title: string, head: string, base: string, body?: string) => {
+    // 获取服务配置信息
+    const service = services.find(s => s.name === serviceName)
+    
     const response = await fetch("/api/github/pull-request", {
       method: "POST",
       headers: {
@@ -92,6 +190,7 @@ export default function TaskDetailPage() {
         base,
         body,
         githubConfigs: settings.githubConfigs || [],
+        serviceRepository: service?.repository, // 传递服务的仓库地址用于域名匹配
       }),
     })
 
@@ -159,9 +258,27 @@ export default function TaskDetailPage() {
   }
 
   const handleCopyGitCommand = (branchName: string, serviceName: string) => {
-    // 查找对应的服务配置获取master分支名
+    // 查找对应的服务配置获取master分支名，不提供兜底逻辑
     const service = services.find(s => s.name === serviceName)
-    const masterBranch = service?.masterBranch || 'main'
+    if (!service) {
+      toast({
+        title: "❌ 服务配置不存在",
+        description: `找不到服务 "${serviceName}" 的配置，请先在服务管理中添加该服务配置。`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!service.masterBranch) {
+      toast({
+        title: "❌ 主分支配置缺失",
+        description: `服务 "${serviceName}" 未配置主分支，请在服务管理中设置主分支名称。`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    const masterBranch = service.masterBranch
     
     // 单行命令：获取远程信息，智能处理三种场景
     const command = `git fetch origin && (git checkout ${branchName} 2>/dev/null || (git show-ref --verify --quiet refs/remotes/origin/${branchName} && git checkout -b ${branchName} origin/${branchName} || (git checkout -b ${branchName} origin/${masterBranch} && git push -u origin ${branchName})))`
@@ -179,9 +296,27 @@ export default function TaskDetailPage() {
     const branch = editedTask.serviceBranches?.find((b) => b.id === branchId)
     if (!branch) return
 
-    // 从服务配置中获取测试分支名称
+    // 从服务配置中获取测试分支名称，不提供兜底逻辑
     const service = services.find(s => s.name === branch.serviceName)
-    const testBranch = service?.testBranch || 'test'
+    if (!service) {
+      toast({
+        title: "❌ 服务配置不存在",
+        description: `找不到服务 "${branch.serviceName}" 的配置，请先在服务管理中添加该服务配置。`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!service.testBranch) {
+      toast({
+        title: "❌ 测试分支配置缺失",
+        description: `服务 "${branch.serviceName}" 未配置测试分支，请在服务管理中设置测试分支名称。`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    const testBranch = service.testBranch
 
     setMergingBranches((prev) => new Set(prev).add(branchId))
 
@@ -234,9 +369,27 @@ export default function TaskDetailPage() {
     const branch = editedTask.serviceBranches?.find((b) => b.id === branchId)
     if (!branch) return
 
-    // 从服务配置中获取主分支名称
+    // 从服务配置中获取主分支名称，不提供兜底逻辑
     const service = services.find(s => s.name === branch.serviceName)
-    const masterBranch = service?.masterBranch || 'master'
+    if (!service) {
+      toast({
+        title: "❌ 服务配置不存在",
+        description: `找不到服务 "${branch.serviceName}" 的配置，请先在服务管理中添加该服务配置。`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!service.masterBranch) {
+      toast({
+        title: "❌ 主分支配置缺失",
+        description: `服务 "${branch.serviceName}" 未配置主分支，请在服务管理中设置主分支名称。`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    const masterBranch = service.masterBranch
 
     setMergingBranches((prev) => new Set(prev).add(branchId))
 
@@ -554,6 +707,12 @@ export default function TaskDetailPage() {
                                   >
                                     <ExternalLink className="h-3 w-3" />
                                   </a>
+                                  {checkingStatus.has(branch.id) && (
+                                    <div className="flex items-center gap-1 text-xs text-blue-600">
+                                      <RefreshCw className="h-3 w-3 animate-spin" />
+                                      检查中...
+                                    </div>
+                                  )}
                                   {branch.mergedToTest && (
                                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                                       🟢 已合并测试分支
@@ -582,6 +741,92 @@ export default function TaskDetailPage() {
                                   </Button>
                                 </div>
 
+                                {/* PR状态信息 */}
+                                {branch.pullRequestUrl && branch.prStatus && (
+                                  <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">PR状态</span>
+                                        {branch.prStatus.state === 'open' && !branch.prStatus.merged && (
+                                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                            <CheckCircle className="h-3 w-3 mr-1" />
+                                            Open
+                                          </Badge>
+                                        )}
+                                        {branch.prStatus.merged && (
+                                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                            <CheckCircle className="h-3 w-3 mr-1" />
+                                            Merged
+                                          </Badge>
+                                        )}
+                                        {branch.prStatus.state === 'closed' && !branch.prStatus.merged && (
+                                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                            <XCircle className="h-3 w-3 mr-1" />
+                                            Closed
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <span className="text-xs text-gray-500">#{branch.prStatus.number}</span>
+                                    </div>
+                                    
+                                    {/* 检查状态 */}
+                                    {branch.prStatus.checks && (
+                                      <div className="flex items-center gap-2 text-xs">
+                                        {branch.prStatus.checks.state === 'pending' && (
+                                          <>
+                                            <Clock className="h-3 w-3 text-yellow-600" />
+                                            <span className="text-yellow-700">
+                                              检查中 ({branch.prStatus.checks.completed_count}/{branch.prStatus.checks.total_count})
+                                            </span>
+                                          </>
+                                        )}
+                                        {branch.prStatus.checks.state === 'success' && (
+                                          <>
+                                            <CheckCircle className="h-3 w-3 text-green-600" />
+                                            <span className="text-green-700">检查通过</span>
+                                          </>
+                                        )}
+                                        {branch.prStatus.checks.state === 'failure' && (
+                                          <>
+                                            <XCircle className="h-3 w-3 text-red-600" />
+                                            <span className="text-red-700">
+                                              检查失败 ({branch.prStatus.checks.failed_count} 失败)
+                                            </span>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                    
+                                    {/* 可合并状态 */}
+                                    <div className="flex items-center gap-2 text-xs mt-1">
+                                      {branch.prStatus.mergeable === true && (
+                                        <>
+                                          <CheckCircle className="h-3 w-3 text-green-600" />
+                                          <span className="text-green-700">可以合并</span>
+                                        </>
+                                      )}
+                                      {branch.prStatus.mergeable === false && (
+                                        <>
+                                          <AlertCircle className="h-3 w-3 text-yellow-600" />
+                                          <span className="text-yellow-700">存在冲突</span>
+                                        </>
+                                      )}
+                                      {branch.prStatus.mergeable === null && (
+                                        <>
+                                          <Clock className="h-3 w-3 text-gray-600" />
+                                          <span className="text-gray-700">检查中...</span>
+                                        </>
+                                      )}
+                                    </div>
+
+                                    {branch.lastStatusCheck && (
+                                      <div className="text-xs text-gray-500 mt-2">
+                                        最后检查: {new Date(branch.lastStatusCheck).toLocaleString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
                                 {/* 合并状态和操作 */}
                                 <div className="space-y-3">
                                   {/* 测试分支部分 */}
@@ -605,13 +850,30 @@ export default function TaskDetailPage() {
                                           variant="outline"
                                           size="sm"
                                           onClick={() => handleMergeToTest(branch.id)}
-                                          disabled={mergingBranches.has(branch.id)}
-                                          className="h-7 text-xs bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+                                          disabled={
+                                            mergingBranches.has(branch.id) ||
+                                            checkingStatus.has(branch.id) ||
+                                            (branch.prStatus?.checks?.state === 'pending') ||
+                                            (branch.prStatus?.checks?.state === 'failure') ||
+                                            (branch.prStatus?.mergeable === false)
+                                          }
+                                          className="h-7 text-xs bg-blue-600 text-white hover:bg-blue-700 border-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                          title={
+                                            (branch.prStatus?.checks?.state === 'pending') ? '等待检查完成' :
+                                            (branch.prStatus?.checks?.state === 'failure') ? '检查失败，请修复后再合并' :
+                                            (branch.prStatus?.mergeable === false) ? '存在冲突，请先解决冲突' :
+                                            '合并到测试分支'
+                                          }
                                         >
                                           {mergingBranches.has(branch.id) ? (
                                             <>
                                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                                               合并中...
+                                            </>
+                                          ) : checkingStatus.has(branch.id) ? (
+                                            <>
+                                              <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                                              检查中...
                                             </>
                                           ) : (
                                             "🔄 合并到测试分支"
@@ -647,13 +909,32 @@ export default function TaskDetailPage() {
                                           variant="outline"
                                           size="sm"
                                           onClick={() => handleMergeToMaster(branch.id)}
-                                          disabled={mergingBranches.has(branch.id)}
-                                          className="h-7 text-xs bg-green-600 text-white hover:bg-green-700 border-green-600"
+                                          disabled={
+                                            mergingBranches.has(branch.id) ||
+                                            checkingStatus.has(branch.id) ||
+                                            (branch.prStatus?.checks?.state === 'pending') ||
+                                            (branch.prStatus?.checks?.state === 'failure') ||
+                                            (branch.prStatus?.mergeable === false) ||
+                                            (!branch.mergedToTest && branch.pullRequestUrl) // 未通过测试分支验证
+                                          }
+                                          className="h-7 text-xs bg-green-600 text-white hover:bg-green-700 border-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                          title={
+                                            (!branch.mergedToTest && branch.pullRequestUrl) ? '请先通过测试分支验证' :
+                                            (branch.prStatus?.checks?.state === 'pending') ? '等待检查完成' :
+                                            (branch.prStatus?.checks?.state === 'failure') ? '检查失败，请修复后再合并' :
+                                            (branch.prStatus?.mergeable === false) ? '存在冲突，请先解决冲突' :
+                                            '合并到主分支'
+                                          }
                                         >
                                           {mergingBranches.has(branch.id) ? (
                                             <>
                                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                                               合并中...
+                                            </>
+                                          ) : checkingStatus.has(branch.id) ? (
+                                            <>
+                                              <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                                              检查中...
                                             </>
                                           ) : (
                                             "🚀 合并到主分支"

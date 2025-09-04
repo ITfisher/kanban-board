@@ -14,6 +14,7 @@ interface Service {
   name: string
   description: string
   repository: string
+  dependencies: string[]
   testBranch: string
   masterBranch: string
 }
