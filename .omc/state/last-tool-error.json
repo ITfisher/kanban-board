@@ -1,0 +1,7 @@
+{
+  "tool_name": "Read",
+  "tool_input_preview": "{\"file_path\":\"/Users/panda/Documents/github/kanban-board/app/tasks/[id]/page.tsx\"}",
+  "error": "File content (13883 tokens) exceeds maximum allowed tokens (10000). Use offset and limit parameters to read specific portions of the file, or search for specific content instead of reading the whole file.",
+  "timestamp": "2026-04-13T08:56:35.923Z",
+  "retry_count": 1
+}

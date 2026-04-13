@@ -1,0 +1,557 @@
+{
+  "records": [
+    {
+      "request_id": "37f7180a-9e29-411d-bb9c-6ad1ff154106",
+      "target": "worker-1",
+      "status": "notified",
+      "created_at": "2026-04-13T09:09:30.079Z",
+      "notified_at": "2026-04-13T09:09:30.085Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "prompt_stdin_sent",
+      "metadata": {
+        "kind": "inbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 1,
+        "trigger_message": "Read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/workers/worker-1/inbox.md, work now, report progress, continue assigned work or next feasible task.",
+        "inbox_correlation_key": "startup:worker-1",
+        "transport_preference": "prompt_stdin",
+        "fallback_allowed": false,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "162d0465-3967-4045-a714-e60718b2532d",
+      "target": "worker-2",
+      "status": "notified",
+      "created_at": "2026-04-13T09:09:30.087Z",
+      "notified_at": "2026-04-13T09:09:30.090Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "prompt_stdin_sent",
+      "metadata": {
+        "kind": "inbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 2,
+        "trigger_message": "Read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/workers/worker-2/inbox.md, work now, report progress, continue assigned work or next feasible task.",
+        "inbox_correlation_key": "startup:worker-2",
+        "transport_preference": "prompt_stdin",
+        "fallback_allowed": false,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "742b90a8-9058-4342-b4c2-21f16ca67515",
+      "target": "worker-3",
+      "status": "notified",
+      "created_at": "2026-04-13T09:09:30.091Z",
+      "notified_at": "2026-04-13T09:09:30.095Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "prompt_stdin_sent",
+      "metadata": {
+        "kind": "inbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 3,
+        "trigger_message": "Read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/workers/worker-3/inbox.md, work now, report progress, continue assigned work or next feasible task.",
+        "inbox_correlation_key": "startup:worker-3",
+        "transport_preference": "prompt_stdin",
+        "fallback_allowed": false,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "0bb357a7-c232-4854-bca8-8373b4c1faca",
+      "target": "worker-1",
+      "status": "failed",
+      "created_at": "2026-04-13T09:10:17.399Z",
+      "notified_at": null,
+      "delivered_at": null,
+      "failed_at": "2026-04-13T09:10:17.403Z",
+      "reason": "prompt_worker_handle_missing",
+      "metadata": {
+        "kind": "inbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 1,
+        "trigger_message": "Read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/workers/worker-1/inbox.md, work now, report progress, continue assigned work or next feasible task.",
+        "inbox_correlation_key": "shutdown:worker-1",
+        "transport_preference": "prompt_stdin",
+        "fallback_allowed": false,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "c4f36d22-10e2-4f16-b437-4b2c68a0ef57",
+      "target": "worker-2",
+      "status": "failed",
+      "created_at": "2026-04-13T09:10:17.405Z",
+      "notified_at": null,
+      "delivered_at": null,
+      "failed_at": "2026-04-13T09:10:17.408Z",
+      "reason": "prompt_worker_handle_missing",
+      "metadata": {
+        "kind": "inbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 2,
+        "trigger_message": "Read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/workers/worker-2/inbox.md, work now, report progress, continue assigned work or next feasible task.",
+        "inbox_correlation_key": "shutdown:worker-2",
+        "transport_preference": "prompt_stdin",
+        "fallback_allowed": false,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "761d32dd-568b-4e6c-95dd-6f83d515fffb",
+      "target": "worker-3",
+      "status": "failed",
+      "created_at": "2026-04-13T09:10:17.410Z",
+      "notified_at": null,
+      "delivered_at": null,
+      "failed_at": "2026-04-13T09:10:17.412Z",
+      "reason": "prompt_worker_handle_missing",
+      "metadata": {
+        "kind": "inbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 3,
+        "trigger_message": "Read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/workers/worker-3/inbox.md, work now, report progress, continue assigned work or next feasible task.",
+        "inbox_correlation_key": "shutdown:worker-3",
+        "transport_preference": "prompt_stdin",
+        "fallback_allowed": false,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "5feb13e3-0bc0-454c-8c71-781becc21be8",
+      "target": "worker-1",
+      "status": "notified",
+      "created_at": "2026-04-13T09:10:41.698Z",
+      "notified_at": "2026-04-13T09:10:42.094Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "tmux_send_keys_confirmed",
+      "metadata": {
+        "kind": "inbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 1,
+        "pane_id": "%9",
+        "trigger_message": "Read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/workers/worker-1/inbox.md, work now, report progress, continue assigned work or next feasible task.",
+        "inbox_correlation_key": "startup:worker-1",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "b1389bce-68c3-4f38-b51b-e7d5a863fbbd",
+      "target": "worker-2",
+      "status": "notified",
+      "created_at": "2026-04-13T09:10:44.895Z",
+      "notified_at": "2026-04-13T09:10:46.085Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "tmux_send_keys_confirmed",
+      "metadata": {
+        "kind": "inbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 2,
+        "pane_id": "%10",
+        "trigger_message": "Read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/workers/worker-2/inbox.md, work now, report progress, continue assigned work or next feasible task.",
+        "inbox_correlation_key": "startup:worker-2",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "702109ae-7d26-49f6-8b89-c326ec9adef3",
+      "target": "leader-fixed",
+      "status": "notified",
+      "created_at": "2026-04-13T09:10:59.934Z",
+      "notified_at": "2026-04-13T09:11:02.214Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-1. Review it; decide next step.",
+        "message_id": "dfe82d7b-56d0-42d3-b91f-566ab56491a0",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "55d6708f-2a8e-484e-9816-266e9d44d1fe",
+      "target": "leader-fixed",
+      "status": "notified",
+      "created_at": "2026-04-13T09:11:05.972Z",
+      "notified_at": "2026-04-13T09:11:08.482Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-2. Review it; decide next step.",
+        "message_id": "e5425598-a955-47bd-8fb8-a95d3476bc67",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "9413ce3a-d9df-4d03-8cf6-800098dd7280",
+      "target": "leader-fixed",
+      "status": "notified",
+      "created_at": "2026-04-13T09:11:39.187Z",
+      "notified_at": "2026-04-13T09:11:41.548Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-2. Review it; decide next step.",
+        "message_id": "0681d859-d6fe-4905-a242-8a4fdba536e0",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "0fd2c970-7cdf-4872-bac7-549b30736fff",
+      "target": "worker-3",
+      "status": "notified",
+      "created_at": "2026-04-13T09:12:50.314Z",
+      "notified_at": "2026-04-13T09:12:53.311Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:tmux_send_keys_sent",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 3,
+        "pane_id": "%11",
+        "trigger_message": "1 new msg(s): read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/mailbox/worker-3.json, act, report progress, continue assigned work or next feasible task.",
+        "message_id": "e1e4f8b0-16be-4334-bf2d-21abdd637d60",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 2
+      }
+    },
+    {
+      "request_id": "8136894c-02ea-4222-8d22-e65c77af96ab",
+      "target": "leader-fixed",
+      "status": "notified",
+      "created_at": "2026-04-13T09:13:06.574Z",
+      "notified_at": "2026-04-13T09:13:08.776Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-3. Review it; decide next step.",
+        "message_id": "14ff6af7-4b0a-44ad-8f6a-f72d507bd1bc",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "e4899f4e-1cc4-4f41-af0e-40f8f8497d40",
+      "target": "leader-fixed",
+      "status": "notified",
+      "created_at": "2026-04-13T09:13:14.841Z",
+      "notified_at": "2026-04-13T09:13:17.206Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-2. Review it; decide next step.",
+        "message_id": "bd9f8891-ac54-49c1-b725-8554aff50ea9",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "d4a9fc80-3626-4ee9-bd6d-ffceaf970ca5",
+      "target": "leader-fixed",
+      "status": "notified",
+      "created_at": "2026-04-13T09:17:07.036Z",
+      "notified_at": "2026-04-13T09:17:09.422Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-1. Review it; decide next step.",
+        "message_id": "7b36d8e6-4572-4623-804f-ded1a3ebbba9",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "2b80118c-8591-4dcb-943d-7d16f9405db3",
+      "target": "leader-fixed",
+      "status": "notified",
+      "created_at": "2026-04-13T09:17:09.562Z",
+      "notified_at": "2026-04-13T09:17:11.969Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-2. Review it; decide next step.",
+        "message_id": "65f048af-2c54-4c26-a3bc-3131bf27eb8a",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "15b80fda-1663-4e92-b02c-95ba7720a99e",
+      "target": "leader-fixed",
+      "status": "notified",
+      "created_at": "2026-04-13T09:17:12.092Z",
+      "notified_at": "2026-04-13T09:17:14.508Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-3. Review it; decide next step.",
+        "message_id": "fa8f2050-ece1-4d16-9376-f3e48521664b",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "a9061c68-4a49-4960-948e-1c9387137a26",
+      "target": "leader-fixed",
+      "status": "notified",
+      "created_at": "2026-04-13T09:17:57.805Z",
+      "notified_at": "2026-04-13T09:18:00.201Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-1. Review it; decide next step.",
+        "message_id": "d0612dfa-ff86-479c-82ba-78ef1fd2a157",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "bdcdc95c-e448-4a79-a625-d6940eb86b1e",
+      "target": "worker-1",
+      "status": "notified",
+      "created_at": "2026-04-13T09:20:46.087Z",
+      "notified_at": "2026-04-13T09:20:49.120Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:tmux_send_keys_sent",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 1,
+        "pane_id": "%9",
+        "trigger_message": "1 new msg(s): read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/mailbox/worker-1.json, act, report progress, continue assigned work or next feasible task.",
+        "message_id": "b67754d4-8097-4428-830b-7dcef0af97e8",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "aae846c2-a953-40eb-a700-81c4423b9643",
+      "target": "worker-3",
+      "status": "notified",
+      "created_at": "2026-04-13T09:20:46.108Z",
+      "notified_at": "2026-04-13T09:20:49.148Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:tmux_send_keys_sent",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 3,
+        "pane_id": "%11",
+        "trigger_message": "1 new msg(s): read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/mailbox/worker-3.json, act, report progress, continue assigned work or next feasible task.",
+        "message_id": "3f858bf4-b209-436b-bb33-124129f59f3c",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "cd1aaeed-3c1d-48ef-ba57-3d6f6471beae",
+      "target": "worker-2",
+      "status": "notified",
+      "created_at": "2026-04-13T09:20:46.148Z",
+      "notified_at": "2026-04-13T09:20:49.226Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:tmux_send_keys_sent",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 2,
+        "pane_id": "%10",
+        "trigger_message": "1 new msg(s): read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/mailbox/worker-2.json, act, report progress, continue assigned work or next feasible task.",
+        "message_id": "98221d3d-9989-4597-b4d3-620b1fb252e2",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "33a6c25b-5bfe-4ba2-a397-33cb4eac53bd",
+      "target": "leader-fixed",
+      "status": "failed",
+      "created_at": "2026-04-13T09:26:10.980Z",
+      "notified_at": null,
+      "delivered_at": null,
+      "failed_at": "2026-04-13T09:26:11.295Z",
+      "reason": "fallback_confirmed_after_failed_receipt:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-1. Review it; decide next step.",
+        "message_id": "b5fc7bf7-7c75-419f-8537-c4c417ce82e2",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "b796b970-623a-44b9-a344-2c1723e65fb9",
+      "target": "leader-fixed",
+      "status": "failed",
+      "created_at": "2026-04-13T09:26:11.469Z",
+      "notified_at": null,
+      "delivered_at": null,
+      "failed_at": "2026-04-13T09:26:12.275Z",
+      "reason": "fallback_confirmed_after_failed_receipt:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-2. Review it; decide next step.",
+        "message_id": "63149036-7d06-4255-9d3f-fec43494d9fe",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "f5909637-7ef7-4e1e-8e7e-2b69d3f1f7e3",
+      "target": "leader-fixed",
+      "status": "notified",
+      "created_at": "2026-04-13T09:26:12.395Z",
+      "notified_at": "2026-04-13T09:26:14.826Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:leader_mailbox_notified",
+      "metadata": {
+        "kind": "mailbox",
+        "team_name": "improve-readme-with-page-data",
+        "pane_id": "%8",
+        "trigger_message": "Read /Users/panda/Documents/github/kanban-board/.omx/state/team/improve-readme-with-page-data/mailbox/leader-fixed.json; new msg from worker-3. Review it; decide next step.",
+        "intent": "pending-mailbox-review",
+        "message_id": "00c80bc7-95a2-4846-a938-05bac3d87f70",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "0b0aed62-9cee-424a-973f-a3d8a5be8eb9",
+      "target": "worker-1",
+      "status": "notified",
+      "created_at": "2026-04-13T09:27:33.949Z",
+      "notified_at": "2026-04-13T09:27:36.890Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:tmux_send_keys_sent",
+      "metadata": {
+        "kind": "inbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 1,
+        "pane_id": "%9",
+        "trigger_message": "Read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/workers/worker-1/inbox.md, work now, report progress, continue assigned work or next feasible task.",
+        "intent": "followup-relaunch",
+        "inbox_correlation_key": "shutdown:worker-1",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "86994d3c-d5cf-461a-a9ca-222d2a35910e",
+      "target": "worker-2",
+      "status": "notified",
+      "created_at": "2026-04-13T09:27:36.895Z",
+      "notified_at": "2026-04-13T09:27:40.083Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:tmux_send_keys_sent",
+      "metadata": {
+        "kind": "inbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 2,
+        "pane_id": "%10",
+        "trigger_message": "Read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/workers/worker-2/inbox.md, work now, report progress, continue assigned work or next feasible task.",
+        "intent": "followup-relaunch",
+        "inbox_correlation_key": "shutdown:worker-2",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    },
+    {
+      "request_id": "a176f997-4ef6-4e0a-92af-1a2a4968ce6c",
+      "target": "worker-3",
+      "status": "notified",
+      "created_at": "2026-04-13T09:27:40.086Z",
+      "notified_at": "2026-04-13T09:27:43.212Z",
+      "delivered_at": null,
+      "failed_at": null,
+      "reason": "fallback_confirmed:tmux_send_keys_sent",
+      "metadata": {
+        "kind": "inbox",
+        "team_name": "improve-readme-with-page-data",
+        "worker_index": 3,
+        "pane_id": "%11",
+        "trigger_message": "Read $OMX_TEAM_STATE_ROOT/team/improve-readme-with-page-data/workers/worker-3/inbox.md, work now, report progress, continue assigned work or next feasible task.",
+        "intent": "followup-relaunch",
+        "inbox_correlation_key": "shutdown:worker-3",
+        "transport_preference": "hook_preferred_with_fallback",
+        "fallback_allowed": true,
+        "attempt_count": 1
+      }
+    }
+  ]
+}
