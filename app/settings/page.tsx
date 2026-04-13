@@ -281,15 +281,6 @@ export default function SettingsPage() {
     event.target.value = ""
   }
 
-  const handleClearData = () => {
-    if (confirm("确定要清除所有数据吗？此操作无法撤销。")) {
-      toast({
-        title: "数据已清除",
-        description: "请通过API重新初始化数据，或刷新页面",
-      })
-    }
-  }
-
   return (
     <div className="flex flex-col h-full bg-background">
         {/* Header */}
@@ -321,13 +312,31 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label htmlFor="notifications">桌面通知</Label>
-                    <p className="text-sm text-muted-foreground">接收任务更新和提醒通知</p>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="notifications">桌面通知</Label>
+                      <span className="text-xs rounded-full border border-dashed px-2 py-0.5 text-muted-foreground">
+                        未来支持
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">暂不支持任务提醒、状态变更提醒等桌面通知</p>
                   </div>
                   <Switch
                     id="notifications"
                     checked={settings.notifications}
+                    disabled
                     onCheckedChange={(checked) => handleSettingChange("notifications", checked)}
+                  />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="darkMode">深色模式</Label>
+                    <p className="text-sm text-muted-foreground">切换浅色 / 深色主题，仅保存在本机</p>
+                  </div>
+                  <Switch
+                    id="darkMode"
+                    checked={settings.darkMode}
+                    onCheckedChange={(checked) => handleSettingChange("darkMode", checked)}
                   />
                 </div>
                 <Separator />
@@ -377,27 +386,15 @@ export default function SettingsPage() {
                     <option value="high">高优先级</option>
                   </select>
                 </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="autoCreateBranch">自动创建分支</Label>
-                    <p className="text-sm text-muted-foreground">创建任务时自动生成Git分支名</p>
-                  </div>
-                  <Switch
-                    id="autoCreateBranch"
-                    checked={settings.autoCreateBranch}
-                    onCheckedChange={(checked) => handleSettingChange("autoCreateBranch", checked)}
-                  />
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="branchPrefix">分支前缀</Label>
                   <Input
                     id="branchPrefix"
                     value={settings.branchPrefix}
                     onChange={(e) => handleSettingChange("branchPrefix", e.target.value)}
-                    placeholder="feature/"
+                    placeholder="可留空，例如 feature/"
                   />
-                  <p className="text-sm text-muted-foreground">自动生成分支名时使用的前缀</p>
+                  <p className="text-sm text-muted-foreground">自动生成分支名时使用的前缀，可不设置；留空时直接使用分支名主体</p>
                 </div>
               </CardContent>
             </Card>
@@ -641,7 +638,7 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>数据管理</CardTitle>
-                <CardDescription>备份、导入和清除数据</CardDescription>
+                <CardDescription>备份和导入当前本机数据</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4">
@@ -658,17 +655,6 @@ export default function SettingsPage() {
                       </label>
                     </Button>
                   </div>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>清除所有数据</Label>
-                    <p className="text-sm text-muted-foreground">删除所有任务、服务和设置数据</p>
-                  </div>
-                  <Button onClick={handleClearData} variant="destructive">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    清除数据
-                  </Button>
                 </div>
               </CardContent>
             </Card>

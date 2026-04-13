@@ -52,13 +52,13 @@ export const githubConfigs = sqliteTable("github_configs", {
 
 export const settings = sqliteTable("settings", {
   id: text("id").primaryKey().default("singleton"),
-  notifications: integer("notifications").notNull().default(1),
+  notifications: integer("notifications").notNull().default(0),
   darkMode: integer("dark_mode").notNull().default(0),
   compactView: integer("compact_view").notNull().default(0),
   showAssigneeAvatars: integer("show_assignee_avatars").notNull().default(1),
   defaultPriority: text("default_priority").notNull().default("medium"),
   autoCreateBranch: integer("auto_create_branch").notNull().default(1),
-  branchPrefix: text("branch_prefix").notNull().default("feature/"),
+  branchPrefix: text("branch_prefix").notNull().default(""),
 })
 
 // TypeScript types inferred from schema

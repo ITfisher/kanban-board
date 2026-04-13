@@ -94,7 +94,6 @@ export interface SettingsData {
   compactView: boolean
   showAssigneeAvatars: boolean
   defaultPriority: TaskPriority
-  autoCreateBranch: boolean
   branchPrefix: string
   githubConfigs?: GitHubConfigMeta[]
 }

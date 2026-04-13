@@ -73,13 +73,13 @@ function initSchema(sqlite: Database.Database) {
 
     CREATE TABLE IF NOT EXISTS settings (
       id TEXT PRIMARY KEY DEFAULT 'singleton',
-      notifications INTEGER NOT NULL DEFAULT 1,
+      notifications INTEGER NOT NULL DEFAULT 0,
       dark_mode INTEGER NOT NULL DEFAULT 0,
       compact_view INTEGER NOT NULL DEFAULT 0,
       show_assignee_avatars INTEGER NOT NULL DEFAULT 1,
       default_priority TEXT NOT NULL DEFAULT 'medium',
       auto_create_branch INTEGER NOT NULL DEFAULT 1,
-      branch_prefix TEXT NOT NULL DEFAULT 'feature/'
+      branch_prefix TEXT NOT NULL DEFAULT ''
     );
   `)
 
@@ -105,6 +105,11 @@ function initSchema(sqlite: Database.Database) {
     .prepare(
       `INSERT OR IGNORE INTO settings (id) VALUES ('singleton')`
     )
+    .run()
+
+  // Desktop notifications are not implemented yet, so keep the stored default disabled.
+  sqlite
+    .prepare(`UPDATE settings SET notifications = 0 WHERE id = 'singleton' AND notifications != 0`)
     .run()
 }
 
