@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { generateBranchName, getBranchTemplates, validateBranchName } from "@/lib/branch-generator"
+import { generateBranchName, getBranchTemplates, validateBranchName, type BranchTaskType } from "@/lib/branch-generator"
 import { RefreshCw, Copy, Check, AlertCircle } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 
@@ -16,7 +16,7 @@ interface BranchNameGeneratorProps {
   serviceName: string
   priority?: "low" | "medium" | "high"
   taskId?: string
-  onBranchGenerated?: (branchName: string, taskType: string) => void
+  onBranchGenerated?: (branchName: string, taskType: BranchTaskType) => void
   initialBranchName?: string
 }
 
@@ -28,7 +28,7 @@ export function BranchNameGenerator({
   onBranchGenerated,
   initialBranchName,
 }: BranchNameGeneratorProps) {
-  const [taskType, setTaskType] = useState<string>("feature")
+  const [taskType, setTaskType] = useState<BranchTaskType>("feature")
   const [generatedBranch, setGeneratedBranch] = useState<string>("")
   const [customBranch, setCustomBranch] = useState<string>("")
   const [useCustom, setUseCustom] = useState<boolean>(false)

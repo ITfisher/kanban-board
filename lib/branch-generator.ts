@@ -1,8 +1,10 @@
+export type BranchTaskType = "feature" | "bugfix" | "hotfix" | "refactor" | "docs"
+
 interface BranchGeneratorOptions {
   taskTitle: string
   serviceName: string
   priority?: "low" | "medium" | "high"
-  taskType?: "feature" | "bugfix" | "hotfix" | "refactor" | "docs"
+  taskType?: BranchTaskType
   assignee?: string
   taskId?: string
 }
@@ -13,7 +15,7 @@ interface BranchTemplate {
   description: string
 }
 
-const BRANCH_TEMPLATES: Record<string, BranchTemplate> = {
+const BRANCH_TEMPLATES: Record<BranchTaskType, BranchTemplate> = {
   feature: {
     prefix: "feature",
     pattern: "{prefix}/{service}-{title}-{id}",
@@ -108,7 +110,7 @@ function cleanForBranchName(text: string): string {
   ) // Remove trailing hyphens after truncation
 }
 
-function detectTaskType(title: string, description: string, priority: string): string {
+function detectTaskType(title: string, description: string, priority: string): BranchTaskType {
   const text = `${title} ${description}`.toLowerCase()
 
   // Check for hotfix indicators
@@ -171,7 +173,7 @@ export function generateBranchName(options: BranchGeneratorOptions): string {
   return branchName
 }
 
-export function getBranchTemplates(): Record<string, BranchTemplate> {
+export function getBranchTemplates(): Record<BranchTaskType, BranchTemplate> {
   return BRANCH_TEMPLATES
 }
 

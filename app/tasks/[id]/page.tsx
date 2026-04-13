@@ -845,7 +845,7 @@ export default function TaskDetailPage() {
                               }
                               height={350}
                               data-color-mode="light"
-                              visibleDragBar={false}
+                visibleDragbar={false}
                               preview="live"
                               hideToolbar={false}
                               toolbarHeight={40}
