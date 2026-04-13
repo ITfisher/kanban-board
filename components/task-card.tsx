@@ -44,7 +44,6 @@ interface Task {
 interface TaskCardProps {
   task: Task
   onUpdate: (task: Task) => void
-  onDelete: (taskId: string) => void
   isDragging?: boolean
   compactView?: boolean
   showAssigneeAvatars?: boolean
@@ -56,7 +55,7 @@ interface Service {
   masterBranch?: string
 }
 
-export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compactView = false, showAssigneeAvatars = true }: TaskCardProps) {
+export function TaskCard({ task, onUpdate, isDragging = false, compactView = false, showAssigneeAvatars = true }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task>(task)
   const [showDetailDialog, setShowDetailDialog] = useState(false)

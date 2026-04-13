@@ -93,6 +93,7 @@ export default function BranchesPage() {
     ...services.map(s => s.name),
     ...serviceBranches.map(b => b.serviceName)
   ]))
+  const availableServicesKey = availableServices.join(",")
 
   useEffect(() => {
     if (selectedService && availableServices.includes(selectedService)) {
@@ -100,7 +101,7 @@ export default function BranchesPage() {
     } else if (availableServices.length > 0 && currentService === "all" && !selectedService) {
       // 如果有可用服务但没有指定服务，保持显示所有服务
     }
-  }, [selectedService, availableServices.join(',')])
+  }, [availableServices, availableServicesKey, currentService, selectedService])
 
   const createPullRequest = async (serviceName: string, title: string, head: string, base: string, body?: string) => {
     const response = await fetch("/api/github/pull-request", {
@@ -130,7 +131,7 @@ export default function BranchesPage() {
     setMergingBranches(prev => new Set(prev).add(mergeId))
 
     try {
-      const pullRequest = await createPullRequest(
+      await createPullRequest(
         branch.serviceName,
         `[TEST][${branch.taskTitle}] Deploy to Test Environment`,
         branch.branchName,
@@ -162,7 +163,7 @@ export default function BranchesPage() {
     setMergingBranches(prev => new Set(prev).add(mergeId))
 
     try {
-      const pullRequest = await createPullRequest(
+      await createPullRequest(
         branch.serviceName,
         `[PROD][${branch.taskTitle}] Deploy to Production Environment`,
         branch.branchName,

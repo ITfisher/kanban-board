@@ -18,6 +18,41 @@ interface CheckMergeStatusBody {
   configId?: string
 }
 
+interface PullRequestListItem {
+  number: number
+  title: string
+  state: string
+  merged_at: string | null
+  created_at: string
+  updated_at: string
+  html_url: string
+  mergeable: boolean | null
+  mergeable_state: string
+  user: {
+    login: string
+  }
+}
+
+interface CompareCommitSummary {
+  sha: string
+  html_url: string
+  commit: {
+    message: string
+    author: {
+      name: string
+      date: string
+    }
+  }
+}
+
+interface CompareBranchResponse {
+  status: string
+  ahead_by: number
+  behind_by: number
+  total_commits: number
+  commits?: CompareCommitSummary[]
+}
+
 // 从PR URL中提取PR号码
 function extractPRNumberFromUrl(url: string): string | null {
   const match = url.match(/\/pull\/(\d+)/)
@@ -180,7 +215,7 @@ async function checkBranchMergeStatus(serviceName: string, headBranch: string, b
           throw new Error(`获取PR列表失败: ${pullsResponse.status}`)
         }
 
-        const pulls = await pullsResponse.json()
+        const pulls: PullRequestListItem[] = await pullsResponse.json()
         const latestPR = pulls.length > 0 ? pulls[0] : null
 
         // 2. 检查分支差异
@@ -192,14 +227,14 @@ async function checkBranchMergeStatus(serviceName: string, headBranch: string, b
           const compareResponse = await fetch(compareUrl, { headers })
           
           if (compareResponse.ok) {
-            const compareData = await compareResponse.json()
+            const compareData: CompareBranchResponse = await compareResponse.json()
             isMerged = compareData.behind_by === 0 && compareData.ahead_by === 0
             diffStatus = {
               status: compareData.status, // "ahead", "behind", "identical", "diverged"
               aheadBy: compareData.ahead_by,
               behindBy: compareData.behind_by,
               totalCommits: compareData.total_commits,
-              commits: compareData.commits?.slice(0, 5).map((commit: any) => ({
+              commits: compareData.commits?.slice(0, 5).map((commit) => ({
                 sha: commit.sha.substring(0, 7),
                 message: commit.commit.message.split('\n')[0], // 只取第一行
                 author: commit.commit.author.name,

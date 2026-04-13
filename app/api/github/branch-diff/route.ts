@@ -17,6 +17,35 @@ interface BranchDiffBody {
   configId?: string
 }
 
+interface CompareCommit {
+  sha: string
+  html_url: string
+  commit: {
+    message: string
+    author: {
+      name: string
+      date: string
+    }
+  }
+}
+
+interface CompareFile {
+  filename: string
+  status: string
+  additions: number
+  deletions: number
+  changes: number
+}
+
+interface CompareResponseData {
+  status: string
+  ahead_by: number
+  behind_by: number
+  total_commits: number
+  commits?: CompareCommit[]
+  files?: CompareFile[]
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: BranchDiffBody = await request.json()
@@ -85,7 +114,7 @@ export async function POST(request: NextRequest) {
       }, { status: response.status })
     }
 
-    const compareData = await response.json()
+    const compareData: CompareResponseData = await response.json()
     
     // 解析比较结果
     const result = {
@@ -93,14 +122,14 @@ export async function POST(request: NextRequest) {
       aheadBy: compareData.ahead_by, // head分支领先base分支的提交数
       behindBy: compareData.behind_by, // head分支落后base分支的提交数  
       totalCommits: compareData.total_commits, // 总的不同提交数
-      commits: compareData.commits?.map((commit: any) => ({
+      commits: compareData.commits?.map((commit) => ({
         sha: commit.sha,
         message: commit.commit.message,
         author: commit.commit.author.name,
         date: commit.commit.author.date,
         url: commit.html_url,
       })) || [],
-      files: compareData.files?.map((file: any) => ({
+      files: compareData.files?.map((file) => ({
         filename: file.filename,
         status: file.status, // "added", "removed", "modified", "renamed"
         additions: file.additions,

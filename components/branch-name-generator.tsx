@@ -102,7 +102,7 @@ export function BranchNameGenerator({
         description: "分支名已复制到剪贴板",
       })
       setTimeout(() => setCopied(false), 2000)
-    } catch (error) {
+    } catch {
       toast({
         title: "复制失败",
         description: "无法复制到剪贴板",

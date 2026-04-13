@@ -2,7 +2,7 @@
 
 一个基于 **Next.js 15 + React 19 + TypeScript** 的中文项目管理看板。应用以 **本地 `localStorage` 持久化** 为核心，覆盖任务看板、服务登记、分支追踪、GitHub Pull Request 联动和团队概览。
 
-## 功能概览
+## ✨ 功能概览
 
 - **仪表盘**：统计任务数量、完成率、优先级/状态分布、服务与成员工作量
 - **任务看板**：五阶段流转（待规划 → 待开发 → 开发中 → 待审核 → 已完成）、拖拽移动、筛选搜索、批量删除
@@ -41,30 +41,31 @@ pnpm dev
 
 打开 [http://localhost:3000](http://localhost:3000)。首页会自动跳转到 `/dashboard`。
 
-### 质量检查
+## ✅ 推荐验证命令
 
 ```bash
 pnpm lint
 pnpm typecheck
+node --test tests/readme.test.mjs
 pnpm build
 ```
 
-> 当前仓库尚未提供自动化测试套件；交付时以 lint / typecheck / build 作为主要验证手段。
+> 当前仓库仅提供一个 README 对齐测试；交付时以 lint / typecheck / README 测试 / build 作为主要验证手段。
 
-## 页面与路由
+## 🌐 页面地图
 
-| 路由 | 说明 | 主要组件 |
+| 路由 | 说明 | 主要组件 / 源码入口 |
 | --- | --- | --- |
 | `/` | 启动页，自动跳转到仪表盘 | `app/page.tsx` |
 | `/dashboard` | 数据总览、状态/优先级/服务统计 | `app/dashboard/page.tsx` |
-| `/tasks` | 主看板页面，包含拖拽、筛选、批量操作 | `TaskCard`、`CreateTaskDialog`、`SearchFilter` |
+| `/tasks` | 主看板页面，包含拖拽、筛选、批量操作 | `app/tasks/page.tsx`、`TaskCard`、`CreateTaskDialog`、`SearchFilter` |
 | `/tasks/[id]` | 单任务详情页，支持 Markdown、服务分支和 PR 状态 | `app/tasks/[id]/page.tsx` |
-| `/services` | 服务登记与仓库配置 | `AddServiceDialog` |
+| `/services` | 服务登记与仓库配置 | `app/services/page.tsx`、`AddServiceDialog` |
 | `/branches` | 按服务查看分支和部署 PR 流转 | `app/branches/page.tsx` |
 | `/settings` | 偏好设置与 GitHub 配置 | `app/settings/page.tsx` |
-| `/api/github/*` | 服务端 GitHub 代理接口 | `pull-request` / `pr-status` / `branch-diff` / `check-merge-status` |
+| `/api/github/*` | 服务端 GitHub 代理接口 | `app/api/github/pull-request/route.ts`、`app/api/github/pr-status/route.ts`、`app/api/github/branch-diff/route.ts`、`app/api/github/check-merge-status/route.ts` |
 
-## 页面导航图
+### 页面导航图
 
 ```mermaid
 graph TD
@@ -77,7 +78,7 @@ graph TD
   Tasks --> TaskDetail["/tasks/[id]"]
 ```
 
-## 数据流图
+## 🔄 数据流
 
 ```mermaid
 graph LR
@@ -94,7 +95,7 @@ graph LR
   TaskDetail[任务详情页] --> ApiFetch
 ```
 
-## 核心组件关系图
+## 🧩 核心组件协作图
 
 ```mermaid
 graph TD
@@ -214,7 +215,7 @@ kanban-board/
 └── README.md
 ```
 
-## 仓库约定（Repository Conventions）
+## 📁 仓库约定
 
 | 约定 | 说明 |
 | --- | --- |
