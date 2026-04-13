@@ -181,7 +181,7 @@ export function generateMultiServiceBranches(
   taskTitle: string,
   services: string[],
   options: Partial<BranchGeneratorOptions> = {},
-): Array<{ serviceName: string; branchName: string; taskType: string }> {
+): Array<{ serviceName: string; branchName: string; taskType: BranchTaskType }> {
   return services.map((serviceName) => {
     const branchName = generateBranchName({
       taskTitle,

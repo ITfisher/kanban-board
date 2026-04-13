@@ -124,7 +124,7 @@ export function BranchNameGenerator({
         {/* Task Type Selection */}
         <div>
           <Label className="text-xs">任务类型</Label>
-          <Select value={taskType} onValueChange={setTaskType}>
+          <Select value={taskType} onValueChange={(value) => setTaskType(value as BranchTaskType)}>
             <SelectTrigger className="h-8">
               <SelectValue />
             </SelectTrigger>

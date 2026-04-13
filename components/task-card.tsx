@@ -50,11 +50,17 @@ interface TaskCardProps {
   showAssigneeAvatars?: boolean
 }
 
+interface Service {
+  id: string
+  name: string
+  masterBranch?: string
+}
+
 export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compactView = false, showAssigneeAvatars = true }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task>(task)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
-  const [services] = useLocalStorage<Array<{ id: string; name: string; masterBranch?: string }>>("kanban-services", [])
+  const [services] = useLocalStorage<Service[]>("kanban-services", [])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
