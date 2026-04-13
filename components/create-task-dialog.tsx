@@ -102,7 +102,7 @@ export function CreateTaskDialog({ onCreateTask, defaultStatus = "backlog" }: Cr
                 onChange={(value) => setNewTask({ ...newTask, description: value || "" })}
                 height={250}
                 data-color-mode="light"
-                visibleDragBar={false}
+                visibleDragbar={false}
                 preview="edit"
                 hideToolbar={false}
                 toolbarHeight={35}

@@ -14,6 +14,7 @@ interface Service {
   name: string
   description: string
   repository: string
+  dependencies: string[]
   testBranch: string
   masterBranch: string
 }
@@ -37,10 +38,11 @@ export function AddServiceDialog({ onClose, onAddService, existingServices }: Ad
     e.preventDefault()
 
     if (!formData.name.trim()) return
+    if (existingServices.some((service) => service.name === formData.name.trim())) return
 
     const newService: Service = {
       id: Date.now().toString(),
-      name: formData.name,
+      name: formData.name.trim(),
       description: formData.description,
       repository: formData.repository,
       dependencies: [],

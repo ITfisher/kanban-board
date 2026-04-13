@@ -17,42 +17,53 @@ interface CreatePullRequestBody {
   body?: string
   githubConfigs?: GitHubConfig[]
   configId?: string
+  serviceRepository?: string
+}
+
+// 从仓库URL解析域名
+function extractDomainFromRepository(repository?: string): string | null {
+  if (!repository) return null
+  
+  // 首先尝试作为完整URL解析
+  if (repository.startsWith('http://') || repository.startsWith('https://')) {
+    try {
+      const url = new URL(repository)
+      return url.hostname
+    } catch {
+      return null
+    }
+  }
+  
+  // 如果不是完整URL，尝试解析常见的Git URL格式
+  // 例如: git@github.com:owner/repo.git 或 github.com/owner/repo
+  const matches = repository.match(/(?:git@|https?:\/\/)?([^\/:]*)[:\/]/)
+  return matches ? matches[1] : null
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CreatePullRequestBody = await request.json()
-    const { serviceName, title, head, base, body: prBody, githubConfigs = [], configId } = body
+    const { serviceName, title, head, base, body: prBody, githubConfigs = [], configId, serviceRepository } = body
 
     // 选择GitHub配置
     let selectedConfig: GitHubConfig | undefined
 
     if (configId) {
+      // 显式指定配置ID
       selectedConfig = githubConfigs.find(config => config.id === configId)
-    } else {
-      selectedConfig = githubConfigs.find(config => config.isDefault) || githubConfigs[0]
-    }
-
-    // 回退到环境变量（向后兼容）
-    if (!selectedConfig) {
-      const envToken = process.env.GITHUB_TOKEN
-      const envOwner = process.env.GITHUB_OWNER
-      
-      if (envToken && envOwner) {
-        selectedConfig = {
-          id: "env",
-          name: "Environment",
-          domain: "github.com",
-          owner: envOwner,
-          token: envToken,
-          isDefault: true,
-        }
+    } else if (serviceRepository) {
+      // 根据服务仓库域名自动匹配GitHub配置
+      const repositoryDomain = extractDomainFromRepository(serviceRepository)
+      if (repositoryDomain) {
+        selectedConfig = githubConfigs.find(config => config.domain === repositoryDomain)
       }
     }
 
     if (!selectedConfig || !selectedConfig.token) {
       return NextResponse.json({ 
-        error: "GitHub配置未找到或Token未设置。请在设置页面配置GitHub访问令牌。" 
+        error: githubConfigs.length === 0 
+          ? "未找到GitHub配置，请先在设置页面添加GitHub配置。"
+          : "指定的GitHub配置不存在或Token未设置，请检查配置。" 
       }, { status: 400 })
     }
 

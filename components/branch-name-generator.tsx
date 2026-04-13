@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { generateBranchName, getBranchTemplates, validateBranchName } from "@/lib/branch-generator"
+import { generateBranchName, getBranchTemplates, validateBranchName, type BranchTaskType } from "@/lib/branch-generator"
 import { RefreshCw, Copy, Check, AlertCircle } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 
@@ -16,7 +16,7 @@ interface BranchNameGeneratorProps {
   serviceName: string
   priority?: "low" | "medium" | "high"
   taskId?: string
-  onBranchGenerated?: (branchName: string, taskType: string) => void
+  onBranchGenerated?: (branchName: string, taskType: BranchTaskType) => void
   initialBranchName?: string
 }
 
@@ -28,7 +28,7 @@ export function BranchNameGenerator({
   onBranchGenerated,
   initialBranchName,
 }: BranchNameGeneratorProps) {
-  const [taskType, setTaskType] = useState<string>("feature")
+  const [taskType, setTaskType] = useState<BranchTaskType>("feature")
   const [generatedBranch, setGeneratedBranch] = useState<string>("")
   const [customBranch, setCustomBranch] = useState<string>("")
   const [useCustom, setUseCustom] = useState<boolean>(false)
@@ -102,7 +102,7 @@ export function BranchNameGenerator({
         description: "分支名已复制到剪贴板",
       })
       setTimeout(() => setCopied(false), 2000)
-    } catch (error) {
+    } catch {
       toast({
         title: "复制失败",
         description: "无法复制到剪贴板",
@@ -124,7 +124,7 @@ export function BranchNameGenerator({
         {/* Task Type Selection */}
         <div>
           <Label className="text-xs">任务类型</Label>
-          <Select value={taskType} onValueChange={setTaskType}>
+          <Select value={taskType} onValueChange={(value) => setTaskType(value as BranchTaskType)}>
             <SelectTrigger className="h-8">
               <SelectValue />
             </SelectTrigger>

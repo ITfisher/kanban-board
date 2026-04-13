@@ -34,21 +34,21 @@ interface SettingsData {
   githubConfigs: GitHubConfig[]
 }
 
-export default function SettingsPage() {
-  const defaultSettings: SettingsData = {
-    notifications: true,
-    autoSave: true,
-    darkMode: false,
-    compactView: false,
-    showAssigneeAvatars: true,
-    defaultPriority: "medium",
-    autoCreateBranch: true,
-    branchPrefix: "feature/",
-    githubConfigs: [],
-  }
+const DEFAULT_SETTINGS: SettingsData = {
+  notifications: true,
+  autoSave: true,
+  darkMode: false,
+  compactView: false,
+  showAssigneeAvatars: true,
+  defaultPriority: "medium",
+  autoCreateBranch: true,
+  branchPrefix: "feature/",
+  githubConfigs: [],
+}
 
-  const [settings, setSettings] = useState<SettingsData>(defaultSettings)
-  const [originalSettings, setOriginalSettings] = useState<SettingsData>(defaultSettings)
+export default function SettingsPage() {
+  const [settings, setSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
+  const [originalSettings, setOriginalSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
   const [hasChanges, setHasChanges] = useState(false)
   const [editingGithub, setEditingGithub] = useState<string | null>(null)
   const [newGithubConfig, setNewGithubConfig] = useState<Partial<GitHubConfig>>({
@@ -69,7 +69,7 @@ export default function SettingsPage() {
         console.error("Failed to parse saved settings:", error)
       }
     } else {
-      setOriginalSettings(defaultSettings)
+      setOriginalSettings(DEFAULT_SETTINGS)
     }
   }, [])
 
@@ -217,7 +217,7 @@ export default function SettingsPage() {
         if (importData.settings) {
           // 处理导入的设置，确保GitHub配置兼容性
           const importedSettings = {
-            ...defaultSettings,
+            ...DEFAULT_SETTINGS,
             ...importData.settings,
             githubConfigs: importData.settings.githubConfigs?.filter((config: GitHubConfig) => 
               config.token && config.token !== "***HIDDEN***"
@@ -230,7 +230,7 @@ export default function SettingsPage() {
           title: "数据导入成功",
           description: "数据已成功导入，GitHub Token配置需要重新设置",
         })
-      } catch (error) {
+      } catch {
         toast({
           title: "导入失败",
           description: "文件格式不正确，请检查后重试",
