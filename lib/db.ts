@@ -74,7 +74,6 @@ function initSchema(sqlite: Database.Database) {
     CREATE TABLE IF NOT EXISTS settings (
       id TEXT PRIMARY KEY DEFAULT 'singleton',
       notifications INTEGER NOT NULL DEFAULT 1,
-      auto_save INTEGER NOT NULL DEFAULT 1,
       dark_mode INTEGER NOT NULL DEFAULT 0,
       compact_view INTEGER NOT NULL DEFAULT 0,
       show_assignee_avatars INTEGER NOT NULL DEFAULT 1,

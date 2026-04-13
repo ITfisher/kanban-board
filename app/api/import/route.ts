@@ -101,7 +101,6 @@ export async function POST(request: NextRequest) {
         const source = importData.settings
 
         if (source.notifications !== undefined) updateData.notifications = source.notifications ? 1 : 0
-        if (source.autoSave !== undefined) updateData.autoSave = source.autoSave ? 1 : 0
         if (source.darkMode !== undefined) updateData.darkMode = source.darkMode ? 1 : 0
         if (source.compactView !== undefined) updateData.compactView = source.compactView ? 1 : 0
         if (source.showAssigneeAvatars !== undefined) updateData.showAssigneeAvatars = source.showAssigneeAvatars ? 1 : 0

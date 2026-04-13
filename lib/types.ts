@@ -90,7 +90,6 @@ export interface GitHubConfigMeta {
 
 export interface SettingsData {
   notifications: boolean
-  autoSave: boolean
   darkMode: boolean
   compactView: boolean
   showAssigneeAvatars: boolean

@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label"
 import { GitBranch, Save, X, GripVertical, Plus } from "lucide-react"
 import { TaskDetailDialog } from "./task-detail-dialog"
 import { toast } from "@/hooks/use-toast"
+import { useAppSettings } from "@/hooks/use-app-settings"
+import { buildTaskBranchName } from "@/lib/branch-name"
 import { buildSmartCheckoutCommand } from "@/lib/git-commands"
 import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
 import type { Service, ServiceBranch, Task } from "@/lib/types"
@@ -28,6 +30,7 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onUpdate, isDragging = false, compactView = false, showAssigneeAvatars = true }: TaskCardProps) {
+  const { settings } = useAppSettings()
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task>(task)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
@@ -86,7 +89,7 @@ export function TaskCard({ task, onUpdate, isDragging = false, compactView = fal
       id: Date.now().toString(),
       serviceId: defaultService?.id,
       serviceName: defaultService?.name || "",
-      branchName: `feature/${editedTask.title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
+      branchName: buildTaskBranchName(settings.branchPrefix, editedTask.title, Date.now()),
       createdAt: new Date().toISOString(),
     }
 

@@ -6,7 +6,6 @@ import { settings, githubConfigs } from "@/lib/schema"
 function toClientSettings(s: typeof settings.$inferSelect, configs: (typeof githubConfigs.$inferSelect)[]) {
   return {
     notifications: s.notifications === 1,
-    autoSave: s.autoSave === 1,
     darkMode: s.darkMode === 1,
     compactView: s.compactView === 1,
     showAssigneeAvatars: s.showAssigneeAvatars === 1,
@@ -44,7 +43,6 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const {
       notifications,
-      autoSave,
       darkMode,
       compactView,
       showAssigneeAvatars,
@@ -55,7 +53,6 @@ export async function PUT(request: NextRequest) {
 
     const updateData: Partial<typeof settings.$inferInsert> = {}
     if (notifications !== undefined) updateData.notifications = notifications ? 1 : 0
-    if (autoSave !== undefined) updateData.autoSave = autoSave ? 1 : 0
     if (darkMode !== undefined) updateData.darkMode = darkMode ? 1 : 0
     if (compactView !== undefined) updateData.compactView = compactView ? 1 : 0
     if (showAssigneeAvatars !== undefined) updateData.showAssigneeAvatars = showAssigneeAvatars ? 1 : 0

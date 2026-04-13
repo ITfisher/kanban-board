@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label"
 import { GitBranch, Calendar, User, Tag, ExternalLink, Plus } from "lucide-react"
 import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
+import { useAppSettings } from "@/hooks/use-app-settings"
+import { buildTaskBranchName, normalizeBranchPrefix } from "@/lib/branch-name"
 import { buildSmartCheckoutCommand } from "@/lib/git-commands"
 import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
 import type { Service, ServiceBranch, Task } from "@/lib/types"
@@ -22,6 +24,7 @@ interface TaskDetailDialogProps {
 }
 
 export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: TaskDetailDialogProps) {
+  const { settings } = useAppSettings()
   const [services, setServices] = useState<Service[]>([])
   const [showCreateBranch, setShowCreateBranch] = useState(false)
 
@@ -32,13 +35,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
       .catch(() => {})
   }, [])
   const [selectedServiceId, setSelectedServiceId] = useState<string>("")
-  const [branchName, setBranchName] = useState<string>(task ? `feature/${task.id}` : "")
+  const [branchName, setBranchName] = useState<string>(task ? buildTaskBranchName(settings.branchPrefix, task.id) : "")
 
   useEffect(() => {
     if (!task) return
     setSelectedServiceId("")
-    setBranchName(`feature/${task.id}`)
-  }, [task])
+    setBranchName(buildTaskBranchName(settings.branchPrefix, task.id))
+  }, [task, settings.branchPrefix])
 
   if (!task) return null
   
@@ -79,7 +82,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
 
     setShowCreateBranch(false)
     setSelectedServiceId("")
-    setBranchName(`feature/${task.id}`)
+    setBranchName(buildTaskBranchName(settings.branchPrefix, task.id))
   }
 
   const handleCopyGitCommand = (branch: Pick<ServiceBranch, "branchName" | "serviceId" | "serviceName">) => {
@@ -292,7 +295,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
                     <Label htmlFor="branch-name" className="text-xs">分支名称</Label>
                     <Input
                       id="branch-name"
-                      placeholder={`feature/${task.id}`}
+                      placeholder={`${normalizeBranchPrefix(settings.branchPrefix)}${task.id}`}
                       value={branchName}
                       onChange={(e) => setBranchName(e.target.value)}
                       className="h-8 text-xs font-mono"
@@ -312,7 +315,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
                       onClick={() => {
                         setShowCreateBranch(false)
                         setSelectedServiceId("")
-                        setBranchName(`feature/${task.id}`)
+                        setBranchName(buildTaskBranchName(settings.branchPrefix, task.id))
                       }}
                       className="h-7 text-xs"
                     >

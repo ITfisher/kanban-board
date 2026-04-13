@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState, useEffect, useRef } from "react"
+import { useTheme } from "next-themes"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
+import { buildTaskBranchName } from "@/lib/branch-name"
+import { DEFAULT_SETTINGS } from "@/lib/default-settings"
 import { buildSmartCheckoutCommand } from "@/lib/git-commands"
 import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
 import type { BranchStatus, Service, ServiceBranch, SettingsData, Task } from "@/lib/types"
@@ -27,7 +30,7 @@ import {
   RefreshCw,
 } from "lucide-react"
 
-type Settings = Pick<SettingsData, "githubConfigs">
+type Settings = Pick<SettingsData, "githubConfigs" | "branchPrefix" | "darkMode">
 
 const mergeBranchIntoTask = (targetTask: Task, updatedBranch: ServiceBranch): Task => ({
   ...targetTask,
@@ -43,12 +46,17 @@ export default function TaskDetailPage() {
 
   const [task, setTask] = useState<Task | null>(null)
   const [services, setServices] = useState<Service[]>([])
-  const [settings, setSettings] = useState<Settings>({ githubConfigs: [] })
+  const [settings, setSettings] = useState<Settings>({
+    githubConfigs: [],
+    branchPrefix: DEFAULT_SETTINGS.branchPrefix,
+    darkMode: DEFAULT_SETTINGS.darkMode,
+  })
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task | null>(null)
   const [mergingBranches, setMergingBranches] = useState<Set<string>>(new Set())
   const [checkingBranches, setCheckingBranches] = useState<Set<string>>(new Set())
+  const { resolvedTheme } = useTheme()
 
   const pollingAbortRef = useRef<AbortController | null>(null)
 
@@ -227,6 +235,9 @@ export default function TaskDetailPage() {
     settings.githubConfigs?.find((c) => c.isDefault)?.id ??
     settings.githubConfigs?.[0]?.id
 
+  const buildDefaultBranchName = (label: string) =>
+    buildTaskBranchName(settings.branchPrefix, label, Date.now())
+
   const saveTaskFields = async (nextTask: Task) => {
     const { serviceBranches: _ignored, ...taskFields } = nextTask
     void _ignored
@@ -332,7 +343,7 @@ export default function TaskDetailPage() {
       id: Date.now().toString(),
       serviceId: defaultService?.id,
       serviceName: defaultService?.name || "",
-      branchName: `feature/${editedTask.title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
+      branchName: buildDefaultBranchName(editedTask.title),
       createdAt: new Date().toISOString(),
     }
 
@@ -768,7 +779,7 @@ export default function TaskDetailPage() {
                                 )
                               }
                               height={350}
-                              data-color-mode="light"
+                              data-color-mode={resolvedTheme === "dark" ? "dark" : "light"}
                               visibleDragbar={false}
                               preview="live"
                               hideToolbar={false}

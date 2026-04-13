@@ -10,18 +10,8 @@ import { TaskCard } from "@/components/task-card"
 import { CreateTaskDialog } from "@/components/create-task-dialog"
 import { SearchFilter } from "@/components/search-filter"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
+import { DEFAULT_SETTINGS } from "@/lib/default-settings"
 import type { SettingsData, Task } from "@/lib/types"
-
-const defaultSettings: SettingsData = {
-  notifications: true,
-  autoSave: true,
-  darkMode: false,
-  compactView: false,
-  showAssigneeAvatars: true,
-  defaultPriority: "medium",
-  autoCreateBranch: true,
-  branchPrefix: "feature/",
-}
 
 const statusColumns = [
   { id: "backlog", title: "待规划", color: "bg-gray-100" },
@@ -33,7 +23,7 @@ const statusColumns = [
 
 export default function KanbanBoard() {
   const [tasks, setTasks] = useState<Task[]>([])
-  const [settings, setSettings] = useState<SettingsData>(defaultSettings)
+  const [settings, setSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedPriority, setSelectedPriority] = useState("all")
@@ -327,6 +317,7 @@ export default function KanbanBoard() {
               )}
               <CreateTaskDialog
                 onCreateTask={handleCreateTask}
+                defaultPriority={settings.defaultPriority}
               />
             </div>
           </div>
@@ -372,6 +363,7 @@ export default function KanbanBoard() {
                 </p>
                 <CreateTaskDialog
                   onCreateTask={handleCreateTask}
+                  defaultPriority={settings.defaultPriority}
                 />
               </div>
             </div>

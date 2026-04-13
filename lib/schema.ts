@@ -53,7 +53,6 @@ export const githubConfigs = sqliteTable("github_configs", {
 export const settings = sqliteTable("settings", {
   id: text("id").primaryKey().default("singleton"),
   notifications: integer("notifications").notNull().default(1),
-  autoSave: integer("auto_save").notNull().default(1),
   darkMode: integer("dark_mode").notNull().default(0),
   compactView: integer("compact_view").notNull().default(0),
   showAssigneeAvatars: integer("show_assignee_avatars").notNull().default(1),

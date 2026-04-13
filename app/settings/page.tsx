@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
@@ -12,7 +13,9 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "@/hooks/use-toast"
 import { validateBackupData } from "@/lib/import-export"
 import { Settings, Save, Download, Upload, Trash2, Key, Plus, Edit2, Check, X } from "lucide-react"
+import { DEFAULT_SETTINGS } from "@/lib/default-settings"
 import type { GitHubConfigMeta, SettingsData } from "@/lib/types"
+
 
 interface EditingConfig {
   name: string
@@ -22,18 +25,9 @@ interface EditingConfig {
   isDefault?: boolean
 }
 
-const DEFAULT_SETTINGS: SettingsData = {
-  notifications: true,
-  autoSave: true,
-  darkMode: false,
-  compactView: false,
-  showAssigneeAvatars: true,
-  defaultPriority: "medium",
-  autoCreateBranch: true,
-  branchPrefix: "feature/",
-}
-
 export default function SettingsPage() {
+  const { setTheme } = useTheme()
+  const persistedDarkModeRef = useRef(DEFAULT_SETTINGS.darkMode)
   const [settings, setSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
   const [originalSettings, setOriginalSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
   const [hasChanges, setHasChanges] = useState(false)
@@ -72,6 +66,20 @@ export default function SettingsPage() {
     const hasAnyChanges = JSON.stringify(settings) !== JSON.stringify(originalSettings)
     setHasChanges(hasAnyChanges)
   }, [settings, originalSettings])
+
+  useEffect(() => {
+    persistedDarkModeRef.current = originalSettings.darkMode
+  }, [originalSettings.darkMode])
+
+  useEffect(() => {
+    setTheme(settings.darkMode ? "dark" : "light")
+  }, [settings.darkMode, setTheme])
+
+  useEffect(() => {
+    return () => {
+      setTheme(persistedDarkModeRef.current ? "dark" : "light")
+    }
+  }, [setTheme])
 
   const handleSettingChange = (key: string, value: boolean | string) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
@@ -320,18 +328,6 @@ export default function SettingsPage() {
                     id="notifications"
                     checked={settings.notifications}
                     onCheckedChange={(checked) => handleSettingChange("notifications", checked)}
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="autoSave">自动保存</Label>
-                    <p className="text-sm text-muted-foreground">自动保存更改到本地存储</p>
-                  </div>
-                  <Switch
-                    id="autoSave"
-                    checked={settings.autoSave}
-                    onCheckedChange={(checked) => handleSettingChange("autoSave", checked)}
                   />
                 </div>
                 <Separator />

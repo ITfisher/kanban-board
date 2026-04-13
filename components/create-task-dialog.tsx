@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -16,18 +17,34 @@ import type { Task } from "@/lib/types"
 interface CreateTaskDialogProps {
   onCreateTask: (task: Omit<Task, "id">) => void
   defaultStatus?: string
+  defaultPriority?: Task["priority"]
 }
 
-export function CreateTaskDialog({ onCreateTask, defaultStatus = "backlog" }: CreateTaskDialogProps) {
-  const [open, setOpen] = useState(false)
-  const [newTask, setNewTask] = useState({
+function createInitialTask(defaultStatus: Task["status"], defaultPriority: Task["priority"]) {
+  return {
     title: "",
     description: "",
-    status: defaultStatus as Task["status"],
-    priority: "medium" as Task["priority"],
+    status: defaultStatus,
+    priority: defaultPriority,
     assignee: undefined as Task["assignee"],
     jiraUrl: "",
-  })
+  }
+}
+
+export function CreateTaskDialog({
+  onCreateTask,
+  defaultStatus = "backlog",
+  defaultPriority = "medium",
+}: CreateTaskDialogProps) {
+  const { resolvedTheme } = useTheme()
+  const [open, setOpen] = useState(false)
+  const [newTask, setNewTask] = useState(() => createInitialTask(defaultStatus as Task["status"], defaultPriority))
+
+  useEffect(() => {
+    if (!open) {
+      setNewTask(createInitialTask(defaultStatus as Task["status"], defaultPriority))
+    }
+  }, [defaultPriority, defaultStatus, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,14 +58,7 @@ export function CreateTaskDialog({ onCreateTask, defaultStatus = "backlog" }: Cr
     }
 
     onCreateTask(taskToCreate)
-    setNewTask({
-      title: "",
-      description: "",
-      status: defaultStatus as Task["status"],
-      priority: "medium",
-      assignee: undefined,
-      jiraUrl: "",
-    })
+    setNewTask(createInitialTask(defaultStatus as Task["status"], defaultPriority))
     setOpen(false)
   }
 
@@ -88,7 +98,7 @@ export function CreateTaskDialog({ onCreateTask, defaultStatus = "backlog" }: Cr
                 value={newTask.description}
                 onChange={(value) => setNewTask({ ...newTask, description: value || "" })}
                 height={250}
-                data-color-mode="light"
+                data-color-mode={resolvedTheme === "dark" ? "dark" : "light"}
                 visibleDragbar={false}
                 preview="edit"
                 hideToolbar={false}
