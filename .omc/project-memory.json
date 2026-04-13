@@ -178,16 +178,130 @@
   },
   "hotPaths": [
     {
+      "path": "app/tasks/[id]/page.tsx",
+      "accessCount": 19,
+      "lastAccessed": 1776078212286,
+      "type": "file"
+    },
+    {
+      "path": "components/task-card.tsx",
+      "accessCount": 8,
+      "lastAccessed": 1776078313349,
+      "type": "file"
+    },
+    {
+      "path": "app/tasks/page.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1776077970576,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 5,
+      "lastAccessed": 1776077578026,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/pull-request/route.ts",
+      "accessCount": 5,
+      "lastAccessed": 1776077769356,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/pr-status/route.ts",
+      "accessCount": 5,
+      "lastAccessed": 1776077779602,
+      "type": "file"
+    },
+    {
+      "path": "app/dashboard/page.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1776077947727,
+      "type": "file"
+    },
+    {
+      "path": "app/settings/page.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1776078121273,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/check-merge-status/route.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776077816206,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/branch-diff/route.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776077816351,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 4,
+      "lastAccessed": 1776077905839,
+      "type": "directory"
+    },
+    {
+      "path": "app/branches/page.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1776078007671,
+      "type": "file"
+    },
+    {
+      "path": "app/services/page.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1776078044991,
+      "type": "file"
+    },
+    {
+      "path": "components/task-detail-dialog.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1776078281702,
+      "type": "file"
+    },
+    {
+      "path": "hooks/use-local-storage.ts",
+      "accessCount": 3,
+      "lastAccessed": 1776077138809,
+      "type": "file"
+    },
+    {
+      "path": "lib/github-api.ts",
+      "accessCount": 3,
+      "lastAccessed": 1776077150587,
+      "type": "file"
+    },
+    {
+      "path": "components/add-service-dialog.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1776077905453,
+      "type": "file"
+    },
+    {
+      "path": "components/create-task-dialog.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1776078212734,
+      "type": "file"
+    },
+    {
+      "path": "components/main-layout.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1776078268942,
+      "type": "file"
+    },
+    {
       "path": "CLAUDE.md",
       "accessCount": 2,
       "lastAccessed": 1776070646221,
       "type": "file"
     },
     {
-      "path": "",
-      "accessCount": 1,
-      "lastAccessed": 1776070585830,
-      "type": "directory"
+      "path": "app/page.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1776073175255,
+      "type": "file"
     },
     {
       "path": "app",
@@ -214,69 +328,99 @@
       "type": "directory"
     },
     {
-      "path": "package.json",
-      "accessCount": 1,
-      "lastAccessed": 1776070591326,
-      "type": "file"
-    },
-    {
-      "path": "app/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776070594154,
-      "type": "file"
-    },
-    {
-      "path": "lib/github-api.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776070594895,
-      "type": "file"
-    },
-    {
-      "path": "app/api/github/pull-request/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776070595700,
-      "type": "file"
-    },
-    {
-      "path": "app/tasks/[id]/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776070599230,
-      "type": "file"
-    },
-    {
-      "path": "app/dashboard/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776070600134,
-      "type": "file"
-    },
-    {
-      "path": "app/settings/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776070600188,
-      "type": "file"
-    },
-    {
       "path": "lib/branch-generator.ts",
       "accessCount": 1,
       "lastAccessed": 1776070600720,
       "type": "file"
     },
     {
-      "path": "app/api/github/pr-status/route.ts",
+      "path": "app/layout.tsx",
       "accessCount": 1,
-      "lastAccessed": 1776070605818,
+      "lastAccessed": 1776073175434,
       "type": "file"
     },
     {
-      "path": "app/tasks/page.tsx",
+      "path": "lib/utils.ts",
       "accessCount": 1,
-      "lastAccessed": 1776070609696,
+      "lastAccessed": 1776073195086,
       "type": "file"
     },
     {
-      "path": "hooks/use-local-storage.ts",
+      "path": "components/sidebar.tsx",
       "accessCount": 1,
-      "lastAccessed": 1776070610123,
+      "lastAccessed": 1776073207269,
+      "type": "file"
+    },
+    {
+      "path": "app/tasks",
+      "accessCount": 1,
+      "lastAccessed": 1776075375562,
+      "type": "directory"
+    },
+    {
+      "path": "lib/schema.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077620054,
+      "type": "file"
+    },
+    {
+      "path": "lib/db.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077638580,
+      "type": "file"
+    },
+    {
+      "path": "lib/github-utils.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077652743,
+      "type": "file"
+    },
+    {
+      "path": "drizzle.config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077656886,
+      "type": "file"
+    },
+    {
+      "path": "app/api/tasks/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077695967,
+      "type": "file"
+    },
+    {
+      "path": "app/api/tasks/[id]/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077711299,
+      "type": "file"
+    },
+    {
+      "path": "app/api/services/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077716242,
+      "type": "file"
+    },
+    {
+      "path": "app/api/services/[id]/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077726865,
+      "type": "file"
+    },
+    {
+      "path": "app/api/settings/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077735873,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/configs/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077741262,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/configs/[id]/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077754285,
       "type": "file"
     }
   ],

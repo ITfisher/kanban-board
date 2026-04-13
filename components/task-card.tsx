@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label"
 import { GitBranch, Save, X, GripVertical, Plus } from "lucide-react"
 import { TaskDetailDialog } from "./task-detail-dialog"
 import { toast } from "@/hooks/use-toast"
-import { useLocalStorage } from "@/hooks/use-local-storage"
 
 interface ServiceBranch {
   id: string
@@ -59,7 +58,14 @@ export function TaskCard({ task, onUpdate, isDragging = false, compactView = fal
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task>(task)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
-  const [services] = useLocalStorage<Service[]>("kanban-services", [])
+  const [services, setServices] = useState<Service[]>([])
+
+  useEffect(() => {
+    fetch("/api/services")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setServices(data) })
+      .catch(() => {})
+  }, [])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {

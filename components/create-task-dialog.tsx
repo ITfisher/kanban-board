@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label"
 import { Plus, ExternalLink } from "lucide-react"
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
-import "@uiw/react-markdown-preview/markdown.css"
 
 interface Task {
   id: string

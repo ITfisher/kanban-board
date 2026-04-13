@@ -1,30 +1,24 @@
 "use client"
 
 import type React from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
-import { useLocalStorage } from "@/hooks/use-local-storage"
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  status: "backlog" | "todo" | "in-progress" | "review" | "done"
-  priority: "low" | "medium" | "high"
-  assignee?: {
-    name: string
-    avatar?: string
-  }
-  gitBranch?: string
-}
 
 interface MainLayoutProps {
   children: React.ReactNode
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const [tasks] = useLocalStorage<Task[]>("kanban-tasks", [])
+  const [taskCount, setTaskCount] = useState(0)
 
-  const taskCounts = { "全部任务": tasks.length }
+  useEffect(() => {
+    fetch("/api/tasks")
+      .then((r) => r.json())
+      .then((tasks: unknown[]) => setTaskCount(Array.isArray(tasks) ? tasks.length : 0))
+      .catch(() => {})
+  }, [])
+
+  const taskCounts = { "全部任务": taskCount }
 
   return (
     <>

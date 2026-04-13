@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { GitBranch, Calendar, User, Tag, ExternalLink, Plus } from "lucide-react"
 import Link from "next/link"
-import { useLocalStorage } from "@/hooks/use-local-storage"
 import { toast } from "@/hooks/use-toast"
 
 interface ServiceBranch {
@@ -57,8 +56,15 @@ interface TaskDetailDialogProps {
 }
 
 export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: TaskDetailDialogProps) {
-  const [services] = useLocalStorage<Service[]>("kanban-services", [])
+  const [services, setServices] = useState<Service[]>([])
   const [showCreateBranch, setShowCreateBranch] = useState(false)
+
+  useEffect(() => {
+    fetch("/api/services")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setServices(data) })
+      .catch(() => {})
+  }, [])
   const [selectedServiceId, setSelectedServiceId] = useState<string>("")
   const [branchName, setBranchName] = useState<string>(task ? `feature/${task.id}` : "")
 
