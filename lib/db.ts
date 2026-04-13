@@ -37,6 +37,7 @@ function initSchema(sqlite: Database.Database) {
     CREATE TABLE IF NOT EXISTS service_branches (
       id TEXT PRIMARY KEY,
       task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      service_id TEXT,
       service_name TEXT NOT NULL,
       branch_name TEXT NOT NULL,
       pull_request_url TEXT,
@@ -81,6 +82,23 @@ function initSchema(sqlite: Database.Database) {
       auto_create_branch INTEGER NOT NULL DEFAULT 1,
       branch_prefix TEXT NOT NULL DEFAULT 'feature/'
     );
+  `)
+
+  const serviceBranchColumns = sqlite.prepare(`PRAGMA table_info(service_branches)`).all() as Array<{ name: string }>
+  const hasServiceIdColumn = serviceBranchColumns.some((column) => column.name === "service_id")
+  if (!hasServiceIdColumn) {
+    sqlite.exec(`ALTER TABLE service_branches ADD COLUMN service_id TEXT`)
+  }
+
+  sqlite.exec(`
+    UPDATE service_branches
+    SET service_id = (
+      SELECT services.id
+      FROM services
+      WHERE services.name = service_branches.service_name
+      LIMIT 1
+    )
+    WHERE service_id IS NULL
   `)
 
   // Ensure the settings singleton row exists

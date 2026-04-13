@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
-import { tasks, serviceBranches } from "@/lib/schema"
+import { tasks, serviceBranches, services } from "@/lib/schema"
+import { requireBranchService } from "@/lib/service-branch-utils"
 import { toClientTask } from "@/lib/task-data"
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -47,6 +48,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     await db.update(tasks).set(updateData).where(eq(tasks.id, id))
 
     if (incomingBranches !== undefined) {
+      const existingServices = (await db.select().from(services)).map((service) => ({
+        id: service.id,
+        name: service.name,
+      }))
+
       await db.delete(serviceBranches).where(eq(serviceBranches.taskId, id))
 
       if (Array.isArray(incomingBranches) && incomingBranches.length > 0) {
@@ -54,6 +60,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         await db.insert(serviceBranches).values(
           incomingBranches.map((b: {
             id?: string
+            serviceId?: string
             serviceName: string
             branchName: string
             pullRequestUrl?: string
@@ -67,9 +74,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             diffStatus?: unknown
             createdAt?: string
           }) => ({
+            ...requireBranchService(existingServices, b),
             id: b.id ?? crypto.randomUUID(),
             taskId: id,
-            serviceName: b.serviceName,
             branchName: b.branchName,
             pullRequestUrl: b.pullRequestUrl ?? null,
             mergedToTest: b.mergedToTest ? 1 : 0,

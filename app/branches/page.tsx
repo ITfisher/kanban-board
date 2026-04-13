@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
+import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
 import type { Service, ServiceBranch, Task } from "@/lib/types"
 import {
   GitBranch,
@@ -155,7 +156,7 @@ export default function BranchesPage() {
     setMergingBranches(prev => new Set(prev).add(mergeId))
 
     try {
-      const service = services.find((item) => item.name === branch.serviceName)
+      const service = resolveServiceFromBranch(services, branch)
       const testBranch = service?.testBranch
 
       if (!testBranch) {
@@ -163,7 +164,7 @@ export default function BranchesPage() {
       }
 
       const pullRequest = await createPullRequest(
-        branch.serviceName,
+        service.name,
         `[TEST][${branch.taskTitle}] Deploy to Test Environment`,
         branch.branchName,
         testBranch,
@@ -202,7 +203,7 @@ export default function BranchesPage() {
     setMergingBranches(prev => new Set(prev).add(mergeId))
 
     try {
-      const service = services.find((item) => item.name === branch.serviceName)
+      const service = resolveServiceFromBranch(services, branch)
       const masterBranch = service?.masterBranch
 
       if (!masterBranch) {
@@ -210,7 +211,7 @@ export default function BranchesPage() {
       }
 
       const pullRequest = await createPullRequest(
-        branch.serviceName,
+        service.name,
         `[PROD][${branch.taskTitle}] Deploy to Production Environment`,
         branch.branchName,
         masterBranch,

@@ -39,6 +39,7 @@ export interface BranchDiffState {
 export interface ServiceBranch {
   id: string
   taskId?: string
+  serviceId?: string
   serviceName: string
   branchName: string
   createdAt: string

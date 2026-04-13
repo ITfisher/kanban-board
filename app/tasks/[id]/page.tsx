@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
 import { buildSmartCheckoutCommand } from "@/lib/git-commands"
+import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
 import type { BranchStatus, Service, ServiceBranch, SettingsData, Task } from "@/lib/types"
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
@@ -122,6 +123,11 @@ export default function TaskDetailPage() {
     return updatedBranch
   }, [isEditing, taskId])
 
+  const getServiceForBranch = useCallback(
+    (branch: Pick<ServiceBranch, "serviceId">) => resolveServiceFromBranch(services, branch),
+    [services]
+  )
+
   // PR polling with abort controller to fix race condition
   useEffect(() => {
     const defaultConfigId =
@@ -153,12 +159,13 @@ export default function TaskDetailPage() {
 
           try {
             setCheckingBranches((prev) => new Set(prev).add(branch.id))
+            const service = getServiceForBranch(branch)
 
             const response = await fetch("/api/github/pr-status", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                serviceName: branch.serviceName,
+                serviceName: service?.name ?? branch.serviceName,
                 pullRequestUrl: branch.pullRequestUrl,
                 configId: defaultConfigId,
               }),
@@ -167,7 +174,6 @@ export default function TaskDetailPage() {
 
             if (response.ok) {
               const prStatus = await response.json()
-              const service = services.find((item) => item.name === branch.serviceName)
               const testBranch = service?.testBranch
               const masterBranch = service?.masterBranch
 
@@ -216,11 +222,44 @@ export default function TaskDetailPage() {
         pollingAbortRef.current?.abort()
       }
     }
-  }, [loading, settings.githubConfigs, taskId, isEditing, services, updateBranchState])
+  }, [loading, settings.githubConfigs, taskId, isEditing, services, updateBranchState, getServiceForBranch])
 
   const getDefaultConfigId = () =>
     settings.githubConfigs?.find((c) => c.isDefault)?.id ??
     settings.githubConfigs?.[0]?.id
+
+  const saveTaskFields = async (nextTask: Task) => {
+    const { serviceBranches: _ignored, ...taskFields } = nextTask
+    void _ignored
+
+    const response = await fetch(`/api/tasks/${taskId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...taskFields, updatedAt: new Date().toISOString() }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => null)
+      throw new Error(error?.error || "保存任务信息失败")
+    }
+
+    return response.json() as Promise<Task>
+  }
+
+  const saveTaskBranches = async (branches: ServiceBranch[]) => {
+    const response = await fetch(`/api/tasks/${taskId}/branches`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ serviceBranches: branches }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => null)
+      throw new Error(error?.error || "保存任务分支失败")
+    }
+
+    return response.json() as Promise<ServiceBranch[]>
+  }
 
   const createPullRequest = async (
     serviceName: string,
@@ -254,15 +293,15 @@ export default function TaskDetailPage() {
     if (!editedTask) return
 
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...editedTask, updatedAt: new Date().toISOString() }),
-      })
+      await saveTaskFields(editedTask)
+      await saveTaskBranches(editedTask.serviceBranches ?? [])
 
-      if (!res.ok) throw new Error("Failed to save task")
+      const refreshedRes = await fetch(`/api/tasks/${taskId}`)
+      if (!refreshedRes.ok) {
+        throw new Error("刷新任务数据失败")
+      }
 
-      const saved = await res.json()
+      const saved = await refreshedRes.json()
       setTask(saved)
       setEditedTask({ ...saved })
       setIsEditing(false)
@@ -288,9 +327,12 @@ export default function TaskDetailPage() {
   const handleAddServiceBranch = () => {
     if (!editedTask) return
 
+    const defaultService = services[0]
+
     const newBranch: ServiceBranch = {
       id: Date.now().toString(),
-      serviceName: "默认服务",
+      serviceId: defaultService?.id,
+      serviceName: defaultService?.name || "",
       branchName: `feature/${editedTask.title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
       createdAt: new Date().toISOString(),
     }
@@ -321,12 +363,12 @@ export default function TaskDetailPage() {
     })
   }
 
-  const handleCopyGitCommand = (branchName: string, serviceName: string) => {
-    const service = services.find((s) => s.name === serviceName)
+  const handleCopyGitCommand = (branch: Pick<ServiceBranch, "branchName" | "serviceId" | "serviceName">) => {
+    const service = getServiceForBranch(branch)
     if (!service) {
       toast({
         title: "❌ 服务配置不存在",
-        description: `找不到服务 "${serviceName}" 的配置，请先在服务管理中添加该服务配置。`,
+        description: `找不到服务 "${branch.serviceName}" 的配置，请先在服务管理中添加该服务配置。`,
         variant: "destructive",
       })
       return
@@ -335,13 +377,13 @@ export default function TaskDetailPage() {
     if (!service.masterBranch) {
       toast({
         title: "❌ 主分支配置缺失",
-        description: `服务 "${serviceName}" 未配置主分支，请在服务管理中设置主分支名称。`,
+        description: `服务 "${branch.serviceName}" 未配置主分支，请在服务管理中设置主分支名称。`,
         variant: "destructive",
       })
       return
     }
 
-    const command = buildSmartCheckoutCommand(branchName, service.masterBranch)
+    const command = buildSmartCheckoutCommand(branch.branchName, service.masterBranch)
 
     navigator.clipboard.writeText(command)
     toast({
@@ -356,7 +398,7 @@ export default function TaskDetailPage() {
     const branch = editedTask.serviceBranches?.find((b) => b.id === branchId)
     if (!branch) return
 
-    const service = services.find((s) => s.name === branch.serviceName)
+    const service = getServiceForBranch(branch)
     if (!service) {
       toast({
         title: "❌ 服务配置不存在",
@@ -381,7 +423,7 @@ export default function TaskDetailPage() {
 
     try {
       const pullRequest = await createPullRequest(
-        branch.serviceName,
+        service.name,
         `[TEST][${editedTask.title}] Merge to Test Branch`,
         branch.branchName,
         testBranch,
@@ -420,7 +462,7 @@ export default function TaskDetailPage() {
     const branch = editedTask.serviceBranches?.find((b) => b.id === branchId)
     if (!branch) return
 
-    const service = services.find((s) => s.name === branch.serviceName)
+    const service = getServiceForBranch(branch)
     if (!service) {
       toast({
         title: "❌ 服务配置不存在",
@@ -445,7 +487,7 @@ export default function TaskDetailPage() {
 
     try {
       const pullRequest = await createPullRequest(
-        branch.serviceName,
+        service.name,
         `[PROD][${editedTask.title}] Merge to Master Branch`,
         branch.branchName,
         masterBranch,
@@ -484,7 +526,7 @@ export default function TaskDetailPage() {
     const branch = editedTask.serviceBranches?.find((b) => b.id === branchId)
     if (!branch) return
 
-    const service = services.find((s) => s.name === branch.serviceName)
+    const service = getServiceForBranch(branch)
     if (!service) {
       toast({
         title: "❌ 服务配置不存在",
@@ -514,7 +556,7 @@ export default function TaskDetailPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          serviceName: branch.serviceName,
+          serviceName: service.name,
           headBranch: branch.branchName,
           baseBranches,
           configId: getDefaultConfigId(),
@@ -839,17 +881,23 @@ export default function TaskDetailPage() {
                                 <div>
                                   <Label>服务名称</Label>
                                   <select
-                                    value={branch.serviceName}
+                                    value={branch.serviceId || ""}
                                     onChange={(e) =>
-                                      handleUpdateServiceBranch(branch.id, {
-                                        serviceName: e.target.value,
-                                      })
+                                      {
+                                        const selectedService = services.find(
+                                          (service) => service.id === e.target.value
+                                        )
+                                        if (!selectedService) return
+                                        handleUpdateServiceBranch(branch.id, {
+                                          serviceId: selectedService.id,
+                                          serviceName: selectedService.name,
+                                        })
+                                      }
                                     }
                                     className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background"
                                   >
-                                    <option value="默认服务">默认服务</option>
                                     {services.map((service) => (
-                                      <option key={service.id} value={service.name}>
+                                      <option key={service.id} value={service.id}>
                                         {service.name}
                                       </option>
                                     ))}
@@ -922,7 +970,7 @@ export default function TaskDetailPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() =>
-                                      handleCopyGitCommand(branch.branchName, branch.serviceName)
+                                      handleCopyGitCommand(branch)
                                     }
                                     className="h-7 px-2"
                                     title="复制Git命令：若分支存在则切换，若不存在则从主分支创建"

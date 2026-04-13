@@ -1,4 +1,7 @@
+import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
 import type { Task } from "@/lib/types"
+
+export const findServiceForBranch = resolveServiceFromBranch
 
 export function getTaskServiceNames(task: Pick<Task, "serviceBranches">): string[] {
   if (!task.serviceBranches?.length) {

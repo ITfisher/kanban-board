@@ -238,54 +238,22 @@ export default function SettingsPage() {
       try {
         const parsed = JSON.parse(e.target?.result as string)
         const importData = validateBackupData(parsed)
-        const importRequests: Promise<Response>[] = []
+        const importResponse = await fetch("/api/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(importData),
+        })
 
-        if (importData.tasks) {
-          importRequests.push(
-            fetch("/api/tasks", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(importData.tasks),
-            })
-          )
+        if (!importResponse.ok) {
+          const error = await importResponse.json().catch(() => null)
+          throw new Error(error?.error || "导入失败")
         }
-        if (importData.services) {
-          importRequests.push(
-            fetch("/api/services", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(importData.services),
-            })
-          )
-        }
-        if (importData.settings) {
-          const { githubConfigs: _ignored, ...settingsOnly } = importData.settings
-          void _ignored
-          const importedSettings = { ...DEFAULT_SETTINGS, ...settingsOnly }
+
+        const settingsResponse = await fetch("/api/settings")
+        if (settingsResponse.ok) {
+          const importedSettings = await settingsResponse.json()
           setSettings(importedSettings)
           setOriginalSettings(importedSettings)
-          importRequests.push(
-            fetch("/api/settings", {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(importedSettings),
-            })
-          )
-        }
-
-        const results = await Promise.allSettled(importRequests)
-        const failedResponses = results.filter(
-          (result): result is PromiseFulfilledResult<Response> => result.status === "fulfilled" && !result.value.ok
-        )
-        const rejectedRequests = results.filter((result) => result.status === "rejected")
-
-        if (failedResponses.length > 0 || rejectedRequests.length > 0) {
-          const firstFailedResponse = failedResponses[0]
-          const errorMessage = firstFailedResponse
-            ? ((await firstFailedResponse.value.json().catch(() => null))?.error ?? "部分数据导入失败")
-            : "部分数据导入失败"
-
-          throw new Error(errorMessage)
         }
 
         toast({

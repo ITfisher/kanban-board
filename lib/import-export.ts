@@ -20,8 +20,8 @@ function validateServiceBranch(branch: unknown, index: number): branch is Servic
     throw new Error(`第 ${index + 1} 个服务分支格式不正确`)
   }
 
-  if (typeof branch.serviceName !== "string" || !branch.serviceName.trim()) {
-    throw new Error(`第 ${index + 1} 个服务分支缺少有效的服务名称`)
+  if (typeof branch.serviceId !== "string" || !branch.serviceId.trim()) {
+    throw new Error(`第 ${index + 1} 个服务分支缺少有效的 serviceId`)
   }
 
   if (typeof branch.branchName !== "string" || !branch.branchName.trim()) {

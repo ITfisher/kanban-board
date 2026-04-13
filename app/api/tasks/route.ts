@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
-import { tasks, serviceBranches } from "@/lib/schema"
+import { tasks, serviceBranches, services } from "@/lib/schema"
 import { validateTaskList } from "@/lib/import-export"
+import { requireBranchService } from "@/lib/service-branch-utils"
 import { toClientTask } from "@/lib/task-data"
 import type { ServiceBranch, Task } from "@/lib/types"
 
@@ -29,6 +30,10 @@ export async function POST(request: NextRequest) {
 
     if (Array.isArray(body)) {
       const importedTasks = validateTaskList(body)
+      const existingServices = (await db.select().from(services)).map((service) => ({
+        id: service.id,
+        name: service.name,
+      }))
 
       await db.delete(tasks)
 
@@ -59,22 +64,27 @@ export async function POST(request: NextRequest) {
         )
 
         const importedBranches = normalizedTasks.flatMap((task) =>
-          (task.serviceBranches ?? []).map((branch): typeof serviceBranches.$inferInsert => ({
-            id: branch.id || crypto.randomUUID(),
-            taskId: task.id,
-            serviceName: branch.serviceName,
-            branchName: branch.branchName,
-            pullRequestUrl: branch.pullRequestUrl ?? null,
-            mergedToTest: branch.mergedToTest ? 1 : 0,
-            mergedToMaster: branch.mergedToMaster ? 1 : 0,
-            testMergeDate: branch.testMergeDate ?? null,
-            masterMergeDate: branch.masterMergeDate ?? null,
-            lastCommit: branch.lastCommit ?? null,
-            lastStatusCheck: branch.lastStatusCheck ?? null,
-            prStatus: branch.prStatus ? JSON.stringify(branch.prStatus) : null,
-            diffStatus: branch.diffStatus ? JSON.stringify(branch.diffStatus) : null,
-            createdAt: branch.createdAt ?? task.createdAt ?? new Date().toISOString(),
-          }))
+          (task.serviceBranches ?? []).map((branch): typeof serviceBranches.$inferInsert => {
+            const normalizedService = requireBranchService(existingServices, branch)
+
+            return {
+              id: branch.id || crypto.randomUUID(),
+              taskId: task.id,
+              serviceId: normalizedService.serviceId ?? null,
+              serviceName: normalizedService.serviceName,
+              branchName: branch.branchName,
+              pullRequestUrl: branch.pullRequestUrl ?? null,
+              mergedToTest: branch.mergedToTest ? 1 : 0,
+              mergedToMaster: branch.mergedToMaster ? 1 : 0,
+              testMergeDate: branch.testMergeDate ?? null,
+              masterMergeDate: branch.masterMergeDate ?? null,
+              lastCommit: branch.lastCommit ?? null,
+              lastStatusCheck: branch.lastStatusCheck ?? null,
+              prStatus: branch.prStatus ? JSON.stringify(branch.prStatus) : null,
+              diffStatus: branch.diffStatus ? JSON.stringify(branch.diffStatus) : null,
+              createdAt: branch.createdAt ?? task.createdAt ?? new Date().toISOString(),
+            }
+          })
         )
 
         if (importedBranches.length > 0) {
@@ -110,6 +120,10 @@ export async function POST(request: NextRequest) {
 
     const now = new Date().toISOString()
     const taskId = id || crypto.randomUUID()
+    const existingServices = (await db.select().from(services)).map((service) => ({
+      id: service.id,
+      name: service.name,
+    }))
 
     await db.insert(tasks).values({
       id: taskId,
@@ -126,22 +140,27 @@ export async function POST(request: NextRequest) {
 
     if (incomingBranches.length > 0) {
       await db.insert(serviceBranches).values(
-        incomingBranches.map((branch) => ({
-          id: branch.id || crypto.randomUUID(),
-          taskId,
-          serviceName: branch.serviceName,
-          branchName: branch.branchName,
-          pullRequestUrl: branch.pullRequestUrl ?? null,
-          mergedToTest: branch.mergedToTest ? 1 : 0,
-          mergedToMaster: branch.mergedToMaster ? 1 : 0,
-          testMergeDate: branch.testMergeDate ?? null,
-          masterMergeDate: branch.masterMergeDate ?? null,
-          lastCommit: branch.lastCommit ?? null,
-          lastStatusCheck: branch.lastStatusCheck ?? null,
-          prStatus: branch.prStatus ? JSON.stringify(branch.prStatus) : null,
-          diffStatus: branch.diffStatus ? JSON.stringify(branch.diffStatus) : null,
-          createdAt: branch.createdAt ?? createdAt ?? now,
-        }))
+        incomingBranches.map((branch) => {
+          const normalizedService = requireBranchService(existingServices, branch)
+
+          return {
+            id: branch.id || crypto.randomUUID(),
+            taskId,
+            serviceId: normalizedService.serviceId ?? null,
+            serviceName: normalizedService.serviceName,
+            branchName: branch.branchName,
+            pullRequestUrl: branch.pullRequestUrl ?? null,
+            mergedToTest: branch.mergedToTest ? 1 : 0,
+            mergedToMaster: branch.mergedToMaster ? 1 : 0,
+            testMergeDate: branch.testMergeDate ?? null,
+            masterMergeDate: branch.masterMergeDate ?? null,
+            lastCommit: branch.lastCommit ?? null,
+            lastStatusCheck: branch.lastStatusCheck ?? null,
+            prStatus: branch.prStatus ? JSON.stringify(branch.prStatus) : null,
+            diffStatus: branch.diffStatus ? JSON.stringify(branch.diffStatus) : null,
+            createdAt: branch.createdAt ?? createdAt ?? now,
+          }
+        })
       )
     }
 

@@ -25,6 +25,7 @@ export function toClientServiceBranch(branch: ServiceBranchRow): ServiceBranch {
   return {
     id: branch.id,
     taskId: branch.taskId,
+    serviceId: branch.serviceId ?? undefined,
     serviceName: branch.serviceName,
     branchName: branch.branchName,
     pullRequestUrl: branch.pullRequestUrl ?? undefined,

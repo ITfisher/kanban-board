@@ -15,6 +15,7 @@ import { GitBranch, Save, X, GripVertical, Plus } from "lucide-react"
 import { TaskDetailDialog } from "./task-detail-dialog"
 import { toast } from "@/hooks/use-toast"
 import { buildSmartCheckoutCommand } from "@/lib/git-commands"
+import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
 import type { Service, ServiceBranch, Task } from "@/lib/types"
 
 
@@ -80,9 +81,11 @@ export function TaskCard({ task, onUpdate, isDragging = false, compactView = fal
   }
 
   const handleAddServiceBranch = () => {
+    const defaultService = services[0]
     const newBranch: ServiceBranch = {
       id: Date.now().toString(),
-      serviceName: "默认服务",
+      serviceId: defaultService?.id,
+      serviceName: defaultService?.name || "",
       branchName: `feature/${editedTask.title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
       createdAt: new Date().toISOString(),
     }
@@ -109,11 +112,19 @@ export function TaskCard({ task, onUpdate, isDragging = false, compactView = fal
     })
   }
 
-  const handleCopyGitCommand = (branchName: string, serviceName: string) => {
-    // 查找对应的服务配置获取master分支名
-    const service = services.find(s => s.name === serviceName)
+  const handleCopyGitCommand = (branch: Pick<ServiceBranch, "branchName" | "serviceId" | "serviceName">) => {
+    const service = resolveServiceFromBranch(services, branch)
+    if (!service) {
+      toast({
+        title: "服务配置不存在",
+        description: `找不到服务 "${branch.serviceName}" 的配置`,
+        variant: "destructive",
+      })
+      return
+    }
+
     const masterBranch = service?.masterBranch || "main"
-    const command = buildSmartCheckoutCommand(branchName, masterBranch)
+    const command = buildSmartCheckoutCommand(branch.branchName, masterBranch)
 
     navigator.clipboard.writeText(command)
     toast({
@@ -193,14 +204,25 @@ export function TaskCard({ task, onUpdate, isDragging = false, compactView = fal
                   <div key={branch.id} className="border rounded p-2 space-y-2">
                     <div className="grid grid-cols-2 gap-2">
                       <Select
-                        value={branch.serviceName}
-                        onValueChange={(value) => handleUpdateServiceBranch(branch.id, { serviceName: value })}
+                        value={branch.serviceId || ""}
+                        onValueChange={(value) => {
+                          const selectedService = services.find((service) => service.id === value)
+                          if (!selectedService) return
+                          handleUpdateServiceBranch(branch.id, {
+                            serviceId: selectedService.id,
+                            serviceName: selectedService.name,
+                          })
+                        }}
                       >
                         <SelectTrigger className="h-6 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="默认服务">默认服务</SelectItem>
+                          {services.map((service) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <Input
@@ -219,7 +241,7 @@ export function TaskCard({ task, onUpdate, isDragging = false, compactView = fal
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleCopyGitCommand(branch.branchName, branch.serviceName)}
+                        onClick={() => handleCopyGitCommand(branch)}
                         className="h-6 w-6 p-0"
                         title="复制Git命令：若分支存在则切换，若不存在则从主分支创建"
                       >

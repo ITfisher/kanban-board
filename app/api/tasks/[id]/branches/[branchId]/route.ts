@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm"
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { serviceBranches } from "@/lib/schema"
+import { serviceBranches, services } from "@/lib/schema"
+import { requireBranchService } from "@/lib/service-branch-utils"
 import { toClientServiceBranch } from "@/lib/task-data"
 
 function hasOwnProperty<T extends object>(value: T, key: PropertyKey): boolean {
@@ -27,11 +28,17 @@ export async function PATCH(
 
     const updateData: Partial<typeof serviceBranches.$inferInsert> = {}
 
-    if (hasOwnProperty(body, "serviceName")) {
-      if (typeof body.serviceName !== "string" || !body.serviceName.trim()) {
-        return NextResponse.json({ error: "服务名称不能为空" }, { status: 400 })
-      }
-      updateData.serviceName = body.serviceName.trim()
+    if (hasOwnProperty(body, "serviceId")) {
+      const existingServices = (await db.select().from(services)).map((service) => ({
+        id: service.id,
+        name: service.name,
+      }))
+      const normalizedService = requireBranchService(existingServices, {
+        serviceId: typeof body.serviceId === "string" ? body.serviceId : undefined,
+      })
+
+      updateData.serviceId = normalizedService.serviceId
+      updateData.serviceName = normalizedService.serviceName
     }
 
     if (hasOwnProperty(body, "branchName")) {
