@@ -772,7 +772,6 @@ export default function TaskDetailPage() {
                               visibleDragbar={false}
                               preview="live"
                               hideToolbar={false}
-                              toolbarHeight={40}
                               textareaProps={{
                                 placeholder:
                                   "请输入任务描述，支持 Markdown 格式...\n\n示例:\n# 功能需求\n- 功能点1\n- 功能点2\n\n## 技术要求\n```javascript\n// 代码示例\n```",

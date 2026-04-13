@@ -92,7 +92,6 @@ export function CreateTaskDialog({ onCreateTask, defaultStatus = "backlog" }: Cr
                 visibleDragbar={false}
                 preview="edit"
                 hideToolbar={false}
-                toolbarHeight={35}
                 textareaProps={{
                   placeholder: "详细描述任务内容，支持 Markdown 格式...\n\n示例:\n## 功能需求\n- [ ] 任务1\n- [ ] 任务2\n\n### 技术要求\n```javascript\n// 代码示例\n```",
                   style: {
