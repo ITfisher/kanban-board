@@ -11,19 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Plus, ExternalLink } from "lucide-react"
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  status: "backlog" | "todo" | "in-progress" | "review" | "done"
-  priority: "low" | "medium" | "high"
-  assignee?: {
-    name: string
-    avatar?: string
-  }
-  jiraUrl?: string
-}
+import type { Task } from "@/lib/types"
 
 interface CreateTaskDialogProps {
   onCreateTask: (task: Omit<Task, "id">) => void

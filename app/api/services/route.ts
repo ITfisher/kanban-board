@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
+import { validateServiceList } from "@/lib/import-export"
 import { services } from "@/lib/schema"
 import { toClientService } from "@/lib/service-data"
 import type { Service } from "@/lib/types"
@@ -20,12 +21,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     if (Array.isArray(body)) {
-      const importedServices = body as Service[]
-      const hasInvalidService = importedServices.some((service) => !service.name?.trim())
-
-      if (hasInvalidService) {
-        return NextResponse.json({ error: "导入数据中存在空服务名称" }, { status: 400 })
-      }
+      const importedServices = validateServiceList(body)
 
       await db.delete(services)
 

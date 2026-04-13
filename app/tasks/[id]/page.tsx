@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useCallback, useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { MainLayout } from "@/components/main-layout"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
 import { buildSmartCheckoutCommand } from "@/lib/git-commands"
-import type { BranchStatus, GitHubConfigMeta, Service, ServiceBranch, Task } from "@/lib/types"
+import type { BranchStatus, Service, ServiceBranch, SettingsData, Task } from "@/lib/types"
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
 import {
@@ -27,9 +27,14 @@ import {
   RefreshCw,
 } from "lucide-react"
 
-interface Settings {
-  githubConfigs: GitHubConfigMeta[]
-}
+type Settings = Pick<SettingsData, "githubConfigs">
+
+const mergeBranchIntoTask = (targetTask: Task, updatedBranch: ServiceBranch): Task => ({
+  ...targetTask,
+  serviceBranches: targetTask.serviceBranches?.map((branch) =>
+    branch.id === updatedBranch.id ? { ...branch, ...updatedBranch } : branch
+  ),
+})
 
 export default function TaskDetailPage() {
   const params = useParams()
@@ -90,6 +95,33 @@ export default function TaskDetailPage() {
     }
   }, [task, isEditing])
 
+  const updateBranchState = useCallback(async (
+    branchId: string,
+    updates: Record<string, unknown>,
+    signal?: AbortSignal
+  ) => {
+    const response = await fetch(`/api/tasks/${taskId}/branches/${branchId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+      signal,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => null)
+      throw new Error(error?.error || "更新服务分支失败")
+    }
+
+    const updatedBranch: ServiceBranch = await response.json()
+
+    setTask((prev) => (prev ? mergeBranchIntoTask(prev, updatedBranch) : prev))
+    if (!isEditing) {
+      setEditedTask((prev) => (prev ? mergeBranchIntoTask(prev, updatedBranch) : prev))
+    }
+
+    return updatedBranch
+  }, [isEditing, taskId])
+
   // PR polling with abort controller to fix race condition
   useEffect(() => {
     const defaultConfigId =
@@ -116,8 +148,6 @@ export default function TaskDetailPage() {
 
         if (branchesWithPR.length === 0) return
 
-        const updatedBranches = [...currentTask.serviceBranches]
-
         for (const branch of branchesWithPR) {
           if (controller.signal.aborted) return
 
@@ -141,24 +171,24 @@ export default function TaskDetailPage() {
               const testBranch = service?.testBranch
               const masterBranch = service?.masterBranch
 
-              const idx = updatedBranches.findIndex((b) => b.id === branch.id)
-              if (idx !== -1) {
-                updatedBranches[idx] = {
-                  ...updatedBranches[idx],
+              await updateBranchState(
+                branch.id,
+                {
                   prStatus,
                   lastStatusCheck: new Date().toISOString(),
                   mergedToTest:
                     prStatus.merged && testBranch && prStatus.base_ref === testBranch
                       ? true
-                      : updatedBranches[idx].mergedToTest,
+                      : branch.mergedToTest,
                   mergedToMaster:
                     prStatus.merged &&
                     masterBranch &&
                     prStatus.base_ref === masterBranch
                       ? true
-                      : updatedBranches[idx].mergedToMaster,
-                }
-              }
+                      : branch.mergedToMaster,
+                },
+                controller.signal
+              )
             }
           } catch (err) {
             if (err instanceof Error && err.name === "AbortError") return
@@ -172,26 +202,13 @@ export default function TaskDetailPage() {
           }
         }
 
-        // Persist updated branches to server
-        const putRes = await fetch(`/api/tasks/${taskId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ serviceBranches: updatedBranches }),
-          signal: controller.signal,
-        })
-
-        if (putRes.ok) {
-          const saved = await putRes.json()
-          setTask(saved)
-          if (!isEditing) setEditedTask({ ...saved })
-        }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return
         console.error("PR status check failed:", err)
       }
     }
 
-    if (!loading && task) {
+    if (!loading && taskId) {
       checkPRStatus()
       const interval = setInterval(checkPRStatus, 30000)
       return () => {
@@ -199,7 +216,7 @@ export default function TaskDetailPage() {
         pollingAbortRef.current?.abort()
       }
     }
-  }, [task?.id, loading, settings.githubConfigs, taskId, isEditing])
+  }, [loading, settings.githubConfigs, taskId, isEditing, services, updateBranchState])
 
   const getDefaultConfigId = () =>
     settings.githubConfigs?.find((c) => c.isDefault)?.id ??
@@ -231,16 +248,6 @@ export default function TaskDetailPage() {
     }
 
     return response.json()
-  }
-
-  const saveTaskBranches = async (updatedBranches: ServiceBranch[]) => {
-    const res = await fetch(`/api/tasks/${taskId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ serviceBranches: updatedBranches }),
-    })
-    if (!res.ok) throw new Error("Failed to save task")
-    return res.json()
   }
 
   const handleSave = async () => {
@@ -381,20 +388,11 @@ export default function TaskDetailPage() {
         `🔄 **合并到测试分支 Pull Request**\n\n**任务**: ${editedTask.title}\n**描述**: ${editedTask.description}\n**分支**: ${branch.branchName}\n**目标**: 测试分支 (${testBranch})\n\n⚠️ **注意**: 此PR用于将功能分支合并到测试分支，不会影响线上环境。\n\n请审核代码质量和功能完整性后合并到测试分支进行验证。`
       )
 
-      const updatedBranches = editedTask.serviceBranches?.map((b) =>
-        b.id === branchId
-          ? {
-              ...b,
-              mergedToTest: false,
-              testMergeDate: undefined,
-              pullRequestUrl: pullRequest.html_url,
-            }
-          : b
-      ) ?? []
-
-      const saved = await saveTaskBranches(updatedBranches)
-      setTask(saved)
-      setEditedTask({ ...saved })
+      await updateBranchState(branchId, {
+        mergedToTest: false,
+        testMergeDate: null,
+        pullRequestUrl: pullRequest.html_url,
+      })
 
       toast({
         title: "✅ 测试分支合并 PR 创建成功",
@@ -454,20 +452,11 @@ export default function TaskDetailPage() {
         `🚀 **合并到主分支 Pull Request**\n\n**任务**: ${editedTask.title}\n**描述**: ${editedTask.description}\n**分支**: ${branch.branchName}\n**目标**: 主分支 (${masterBranch})\n\n✅ **状态**: ${branch.mergedToTest ? "已通过测试分支验证" : "⚠️ 未验证测试分支"}\n\n🔒 **合并要求**:\n- 代码已在测试分支充分验证\n- 功能测试通过\n- 性能测试通过\n- 安全审查通过\n\n⚠️ **重要**: 此为主分支合并，请仔细审核后合并。`
       )
 
-      const updatedBranches = editedTask.serviceBranches?.map((b) =>
-        b.id === branchId
-          ? {
-              ...b,
-              mergedToMaster: false,
-              masterMergeDate: undefined,
-              pullRequestUrl: pullRequest.html_url,
-            }
-          : b
-      ) ?? []
-
-      const saved = await saveTaskBranches(updatedBranches)
-      setTask(saved)
-      setEditedTask({ ...saved })
+      await updateBranchState(branchId, {
+        mergedToMaster: false,
+        masterMergeDate: null,
+        pullRequestUrl: pullRequest.html_url,
+      })
 
       toast({
         title: "🚀 主分支合并 PR 创建成功",
@@ -587,13 +576,7 @@ export default function TaskDetailPage() {
         }
       }
 
-      const updatedBranches = editedTask.serviceBranches?.map((b) =>
-        b.id === branchId ? { ...b, ...updates } : b
-      ) ?? []
-
-      const saved = await saveTaskBranches(updatedBranches)
-      setTask(saved)
-      setEditedTask({ ...saved })
+      await updateBranchState(branchId, updates)
 
       const statusMessages = []
       if (testStatus?.pullRequest) {

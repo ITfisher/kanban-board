@@ -8,16 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { X } from "lucide-react"
-
-interface Service {
-  id: string
-  name: string
-  description: string
-  repository: string
-  dependencies: string[]
-  testBranch: string
-  masterBranch: string
-}
+import type { Service } from "@/lib/types"
 
 interface AddServiceDialogProps {
   onClose: () => void

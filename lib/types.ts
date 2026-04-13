@@ -99,6 +99,14 @@ export interface SettingsData {
   githubConfigs?: GitHubConfigMeta[]
 }
 
+export interface BackupData {
+  tasks?: Task[]
+  services?: Service[]
+  settings?: Partial<SettingsData>
+  exportDate?: string
+  version?: string
+}
+
 export interface BranchStatus {
   baseBranch: string
   isMerged: boolean

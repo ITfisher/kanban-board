@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { tasks, serviceBranches } from "@/lib/schema"
+import { validateTaskList } from "@/lib/import-export"
 import { toClientTask } from "@/lib/task-data"
 import type { ServiceBranch, Task } from "@/lib/types"
 
@@ -27,22 +28,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     if (Array.isArray(body)) {
-      const importedTasks = body as Task[]
-
-      const hasInvalidTask = importedTasks.some((task) => !task.title?.trim())
-      if (hasInvalidTask) {
-        return NextResponse.json({ error: "导入数据中存在空任务标题" }, { status: 400 })
-      }
+      const importedTasks = validateTaskList(body)
 
       await db.delete(tasks)
 
       if (importedTasks.length > 0) {
-        await db.insert(tasks).values(
-          importedTasks.map((task) => {
-            const now = new Date().toISOString()
+        const now = new Date().toISOString()
+        const normalizedTasks = importedTasks.map((task) => ({
+          ...task,
+          id: task.id || crypto.randomUUID(),
+          createdAt: task.createdAt ?? now,
+          updatedAt: task.updatedAt ?? now,
+        }))
 
+        await db.insert(tasks).values(
+          normalizedTasks.map((task) => {
             return {
-              id: task.id || crypto.randomUUID(),
+              id: task.id,
               title: task.title.trim(),
               description: task.description ?? "",
               status: task.status ?? "backlog",
@@ -50,13 +52,13 @@ export async function POST(request: NextRequest) {
               assigneeName: task.assignee?.name ?? null,
               assigneeAvatar: task.assignee?.avatar ?? null,
               jiraUrl: task.jiraUrl ?? null,
-              createdAt: task.createdAt ?? now,
-              updatedAt: task.updatedAt ?? now,
+              createdAt: task.createdAt,
+              updatedAt: task.updatedAt,
             }
           })
         )
 
-        const importedBranches = importedTasks.flatMap((task) =>
+        const importedBranches = normalizedTasks.flatMap((task) =>
           (task.serviceBranches ?? []).map((branch): typeof serviceBranches.$inferInsert => ({
             id: branch.id || crypto.randomUUID(),
             taskId: task.id,

@@ -94,20 +94,36 @@ export default function BranchesPage() {
     }
   }, [availableServices, availableServicesKey, currentService, selectedService])
 
-  const updateTaskBranches = async (taskId: string, updatedBranches: ServiceBranch[]) => {
-    const task = tasks.find(t => t.id === taskId)
-    if (!task) return
-
-    const res = await fetch(`/api/tasks/${taskId}`, {
-      method: "PUT",
+  const updateBranchState = async (
+    taskId: string,
+    branchId: string,
+    updates: Record<string, unknown>
+  ) => {
+    const res = await fetch(`/api/tasks/${taskId}/branches/${branchId}`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...task, serviceBranches: updatedBranches }),
+      body: JSON.stringify(updates),
     })
 
-    if (!res.ok) throw new Error("Failed to update task")
+    if (!res.ok) {
+      const error = await res.json().catch(() => null)
+      throw new Error(error?.error || "更新服务分支失败")
+    }
 
-    const updated = await res.json()
-    setTasks(prev => prev.map(t => t.id === taskId ? updated : t))
+    const updatedBranch: ServiceBranch = await res.json()
+
+    setTasks(prev =>
+      prev.map(task =>
+        task.id === taskId
+          ? {
+              ...task,
+              serviceBranches: task.serviceBranches?.map(branch =>
+                branch.id === branchId ? { ...branch, ...updatedBranch } : branch
+              ),
+            }
+          : task
+      )
+    )
   }
 
   const createPullRequest = async (serviceName: string, title: string, head: string, base: string, body?: string) => {
@@ -155,15 +171,11 @@ export default function BranchesPage() {
       )
 
       if (branch.taskId) {
-        const task = tasks.find(t => t.id === branch.taskId)
-        if (task?.serviceBranches) {
-          const updatedBranches = task.serviceBranches.map(b =>
-            b.id === branch.id
-              ? { ...b, pullRequestUrl: pullRequest.html_url, mergedToTest: false, testMergeDate: undefined }
-              : b
-          )
-          await updateTaskBranches(branch.taskId, updatedBranches)
-        }
+        await updateBranchState(branch.taskId, branch.id, {
+          pullRequestUrl: pullRequest.html_url,
+          mergedToTest: false,
+          testMergeDate: null,
+        })
       }
 
       toast({
@@ -206,15 +218,11 @@ export default function BranchesPage() {
       )
 
       if (branch.taskId) {
-        const task = tasks.find(t => t.id === branch.taskId)
-        if (task?.serviceBranches) {
-          const updatedBranches = task.serviceBranches.map(b =>
-            b.id === branch.id
-              ? { ...b, pullRequestUrl: pullRequest.html_url, mergedToMaster: false, masterMergeDate: undefined }
-              : b
-          )
-          await updateTaskBranches(branch.taskId, updatedBranches)
-        }
+        await updateBranchState(branch.taskId, branch.id, {
+          pullRequestUrl: pullRequest.html_url,
+          mergedToMaster: false,
+          masterMergeDate: null,
+        })
       }
 
       toast({

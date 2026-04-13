@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "@/hooks/use-toast"
+import { validateBackupData } from "@/lib/import-export"
 import { Settings, Save, Download, Upload, Trash2, Key, Plus, Edit2, Check, X } from "lucide-react"
 import type { GitHubConfigMeta, SettingsData } from "@/lib/types"
 
@@ -195,9 +196,18 @@ export default function SettingsPage() {
       fetch("/api/services"),
     ])
 
+    if (!tasksRes.ok || !servicesRes.ok) {
+      toast({
+        title: "导出失败",
+        description: "无法读取任务或服务数据，请稍后重试",
+        variant: "destructive",
+      })
+      return
+    }
+
     const exportData = {
-      tasks: tasksRes.ok ? await tasksRes.json() : [],
-      services: servicesRes.ok ? await servicesRes.json() : [],
+      tasks: await tasksRes.json(),
+      services: await servicesRes.json(),
       settings,
       exportDate: new Date().toISOString(),
       version: "1.0.0",
@@ -226,8 +236,10 @@ export default function SettingsPage() {
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
-        const importData = JSON.parse(e.target?.result as string)
+        const parsed = JSON.parse(e.target?.result as string)
+        const importData = validateBackupData(parsed)
         const importRequests: Promise<Response>[] = []
+
         if (importData.tasks) {
           importRequests.push(
             fetch("/api/tasks", {
@@ -268,17 +280,22 @@ export default function SettingsPage() {
         const rejectedRequests = results.filter((result) => result.status === "rejected")
 
         if (failedResponses.length > 0 || rejectedRequests.length > 0) {
-          throw new Error("部分数据导入失败")
+          const firstFailedResponse = failedResponses[0]
+          const errorMessage = firstFailedResponse
+            ? ((await firstFailedResponse.value.json().catch(() => null))?.error ?? "部分数据导入失败")
+            : "部分数据导入失败"
+
+          throw new Error(errorMessage)
         }
 
         toast({
           title: "数据导入成功",
           description: "数据已成功导入，GitHub配置需要手动重新设置",
         })
-      } catch {
+      } catch (error) {
         toast({
           title: "导入失败",
-          description: "文件格式不正确，请检查后重试",
+          description: error instanceof Error ? error.message : "文件格式不正确，请检查后重试",
           variant: "destructive",
         })
       }

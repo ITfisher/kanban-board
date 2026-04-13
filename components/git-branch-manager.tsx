@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Plus, GitMerge, Trash2, Eye, GitCommit } from "lucide-react"
+import type { Task } from "@/lib/types"
 
 interface Branch {
   name: string
@@ -21,14 +22,12 @@ interface Branch {
   commits: number
 }
 
-interface Task {
-  id: string
-  title: string
+type BranchTask = Pick<Task, "id" | "title"> & {
   gitBranch?: string
 }
 
 interface GitBranchManagerProps {
-  tasks: Task[]
+  tasks: BranchTask[]
   onUpdateTask: (taskId: string, gitBranch: string) => void
 }
 
