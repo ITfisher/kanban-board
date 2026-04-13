@@ -2,7 +2,6 @@
 
 import { useCallback, useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { MainLayout } from "@/components/main-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -694,30 +693,25 @@ export default function TaskDetailPage() {
 
   if (loading) {
     return (
-      <MainLayout>
-        <div className="flex flex-col items-center justify-center h-full text-center">
-          <Loader2 className="h-8 w-8 animate-spin mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">加载中...</p>
-        </div>
-      </MainLayout>
+      <div className="flex flex-col items-center justify-center h-full text-center">
+        <Loader2 className="h-8 w-8 animate-spin mb-4 text-muted-foreground" />
+        <p className="text-muted-foreground">加载中...</p>
+      </div>
     )
   }
 
   if (!task) {
     return (
-      <MainLayout>
-        <div className="flex flex-col items-center justify-center h-full text-center">
-          <h3 className="text-lg font-semibold mb-2">任务不存在</h3>
-          <p className="text-muted-foreground mb-4">找不到指定的任务信息</p>
-          <Button onClick={() => router.push("/tasks")}>返回任务列表</Button>
-        </div>
-      </MainLayout>
+      <div className="flex flex-col items-center justify-center h-full text-center">
+        <h3 className="text-lg font-semibold mb-2">任务不存在</h3>
+        <p className="text-muted-foreground mb-4">找不到指定的任务信息</p>
+        <Button onClick={() => router.push("/tasks")}>返回任务列表</Button>
+      </div>
     )
   }
 
   return (
-    <MainLayout>
-      <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background">
         <header className="border-b bg-card flex-shrink-0">
           <div className="flex items-center justify-end px-6 py-4">
             <div className="flex items-center gap-2">
@@ -1220,6 +1214,5 @@ export default function TaskDetailPage() {
           </div>
         </div>
       </div>
-    </MainLayout>
   )
 }

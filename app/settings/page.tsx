@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { MainLayout } from "@/components/main-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
@@ -284,8 +283,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <MainLayout>
-      <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background">
         {/* Header */}
         <header className="border-b bg-card flex-shrink-0">
           <div className="flex items-center justify-between px-6 py-4">
@@ -681,6 +679,5 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-    </MainLayout>
   )
 }

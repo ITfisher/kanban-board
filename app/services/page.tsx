@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { MainLayout } from "@/components/main-layout"
 import { toast } from "@/hooks/use-toast"
 import { getServiceTaskCount } from "@/lib/task-utils"
 import type { Service, Task } from "@/lib/types"
@@ -106,8 +105,7 @@ export default function ServicesPage() {
   }
 
   return (
-    <MainLayout>
-      <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background">
         {/* Header */}
         <header className="border-b bg-card flex-shrink-0">
           <div className="flex items-center justify-between px-6 py-4">
@@ -302,6 +300,5 @@ export default function ServicesPage() {
           />
         )}
       </div>
-    </MainLayout>
   )
 }

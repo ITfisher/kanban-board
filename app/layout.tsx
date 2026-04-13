@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
-import { Suspense } from "react"
+import { AppShell } from "@/components/app-shell"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
@@ -31,10 +31,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-      <body className="font-sans">
-        <Suspense fallback={<div>Loading...</div>}>
-          <div className="flex h-screen bg-background">{children}</div>
-        </Suspense>
+      <body className="font-sans bg-background">
+        <AppShell>{children}</AppShell>
         <Toaster />
         <Analytics />
       </body>

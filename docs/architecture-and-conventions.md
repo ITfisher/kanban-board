@@ -7,12 +7,12 @@ This file is intended as README support material for the kanban board project. I
 | Route | Responsibility | Key UI / logic |
 | --- | --- | --- |
 | `/` | Client redirect entry | Sends users to `/dashboard` |
-| `/dashboard` | Aggregated project analytics | Reads `kanban-tasks` and `kanban-services`, computes status / priority / workload metrics |
+| `/dashboard` | Aggregated project analytics | Reads task/service data from `app/api/*`, computes status / priority / workload metrics |
 | `/tasks` | Main kanban workflow | Task creation, filtering, drag-and-drop status changes, batch delete |
 | `/tasks/[id]` | Task detail and branch lifecycle | Markdown editing, service branch tracking, PR / merge status polling |
 | `/services` | Service registry | Service CRUD plus branch defaults and repository metadata |
 | `/branches` | Branch rollout view | Cross-task service branch summary and deploy-to-test / deploy-to-prod PR actions |
-| `/settings` | Local app configuration | UI preferences, import/export, GitHub config management |
+| `/settings` | App configuration | UI preferences, import/export, GitHub config management |
 
 ## Page and Layout Flow
 
@@ -28,29 +28,31 @@ flowchart TD
     L --> S[Sidebar]
 ```
 
-## Client Data Flow
+## Runtime Data Flow
 
 ```mermaid
 flowchart LR
-    LS[(localStorage)]
     Pages[App Router pages]
-    Hooks[useLocalStorage hook]
     UI[Business components]
-    API[/app/api/github/*]
+    AppApi[/app/api/*]
+    DB[(SQLite / data/kanban.db)]
+    GitHubApi[/app/api/github/*]
     GitHub[GitHub / GitHub Enterprise]
 
-    LS <--> Hooks
-    Hooks <--> Pages
     Pages <--> UI
-    UI --> API
-    API --> GitHub
+    UI --> AppApi
+    AppApi <--> DB
+    UI --> GitHubApi
+    GitHubApi --> GitHub
 ```
 
-### Persistent keys
+### Persistent tables
 
-- `kanban-tasks`: task records and per-task service branch state
-- `kanban-services`: service registry, repositories, and branch defaults
-- `kanban-settings`: UI preferences and GitHub config list
+- `tasks`: task records
+- `service_branches`: per-task service branch state, keyed by `serviceId`
+- `services`: service registry, repositories, and branch defaults
+- `settings`: UI preferences singleton
+- `github_configs`: GitHub configuration records, server-readable only
 
 ## Core Component Relationships
 
@@ -62,9 +64,10 @@ flowchart TD
     TasksPage --> SearchFilter[components/search-filter.tsx]
     TasksPage --> TaskCard[components/task-card.tsx]
     TasksPage --> ConfirmationDialog[components/confirmation-dialog.tsx]
-    TaskDetail[app/tasks/[id]/page.tsx] --> BranchManager[components/git-branch-manager.tsx]
-    ServicesPage[app/services/page.tsx] --> ServiceManager[components/service-manager.tsx]
-    ServiceManager --> AddServiceDialog[components/add-service-dialog.tsx]
+    TaskDetail[app/tasks/[id]/page.tsx] --> TaskApi[app/api/tasks/*]
+    ServicesPage[app/services/page.tsx] --> AddServiceDialog[components/add-service-dialog.tsx]
+    BranchesPage[app/branches/page.tsx] --> TaskApi
+    SettingsPage[app/settings/page.tsx] --> ImportApi[app/api/import/route.ts]
 ```
 
 ## Repository Conventions
@@ -73,26 +76,27 @@ flowchart TD
 
 - The app is a Next.js 15 App Router project with mostly client-rendered pages.
 - `app/layout.tsx` owns global font, analytics, and toast setup.
-- Business state is browser-local; there is no server database layer.
+- Business data is persisted in SQLite (`data/kanban.db`) through Drizzle ORM.
+- `app/api/tasks/*`, `app/api/services/*`, `app/api/settings/*`, and `app/api/import/*` are the server-side data boundary.
 - GitHub integration is proxied through `app/api/github/*` route handlers.
 
 ### Directory intent
 
 - `app/`: route entry points and server route handlers
 - `components/`: business UI plus generated `components/ui/*` primitives
-- `hooks/`: shared client hooks such as local storage and toast helpers
-- `lib/`: pure helpers and integration utilities
+- `hooks/`: shared client hooks such as toast and viewport helpers
+- `lib/`: database bootstrap, schema definitions, mappers, validators, and integration utilities
 - `public/`: static assets
 
 ### Editing guidance
 
 - Keep UI copy in Chinese unless a specific integration requires English.
 - Prefer extending existing shadcn/ui-based patterns before introducing new primitives.
-- Treat `useLocalStorage` as the main persistence boundary for client features.
+- Treat `app/api/*` as the persistence boundary for client features.
 - Prefer the API routes under `app/api/github/*` over the older `lib/github-api.ts` helper when adding GitHub-related behavior.
 
 ## Code Review Notes for README / Maintainers
 
 - `next.config.mjs` currently skips lint and type failures during production builds. This keeps builds resilient, but it also means `pnpm lint` must stay green outside the build pipeline.
-- Core domain types such as `Task`, `Service`, and `GitHubConfig` are duplicated across several pages and route handlers. A shared typed model module would reduce drift if the app keeps growing.
-- GitHub configs are stored in `localStorage`; this is convenient for local-only usage but should be called out as a trust-boundary decision if the product ever moves beyond personal/internal usage.
+- Core domain types are now largely centralized in `lib/types.ts`; future fields should be added there first to avoid drift across pages and route handlers.
+- GitHub configs are stored in SQLite and only exposed to the client without tokens; keep token access strictly server-side.

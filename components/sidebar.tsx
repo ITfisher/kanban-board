@@ -46,6 +46,10 @@ const navigation = [
   },
 ]
 
+function isRouteActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 export function Sidebar({ taskCount = 0, activeServiceCount = 0 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
@@ -79,39 +83,39 @@ export function Sidebar({ taskCount = 0, activeServiceCount = 0 }: SidebarProps)
       <nav className="flex-1 p-2">
         <div className="space-y-1">
           {navigation.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = isRouteActive(pathname, item.href)
             const Icon = item.icon
 
             return (
-              <Link key={item.name} href={item.href}>
-                <div
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors group relative",
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
-                  )}
-                >
-                  <Icon className="h-4 w-4 flex-shrink-0" />
-                  {!collapsed && (
-                    <>
-                      <span className="flex-1">{item.name}</span>
-                      {item.name === "任务管理" && taskCount > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {taskCount}
-                        </Badge>
-                      )}
-                    </>
-                  )}
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors group relative",
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4 flex-shrink-0" />
+                {!collapsed && (
+                  <>
+                    <span className="flex-1">{item.name}</span>
+                    {item.name === "任务管理" && taskCount > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {taskCount}
+                      </Badge>
+                    )}
+                  </>
+                )}
 
-                  {/* Tooltip for collapsed state */}
-                  {collapsed && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded-md shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                      <div className="font-medium">{item.name}</div>
-                      <div className="text-muted-foreground">{item.description}</div>
-                    </div>
-                  )}
-                </div>
+                {/* Tooltip for collapsed state */}
+                {collapsed && (
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded-md shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                    <div className="font-medium">{item.name}</div>
+                    <div className="text-muted-foreground">{item.description}</div>
+                  </div>
+                )}
               </Link>
             )
           })}

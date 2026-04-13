@@ -4,7 +4,6 @@ import type React from "react"
 import { useMemo, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MainLayout } from "@/components/main-layout"
 import { getTaskServiceNames } from "@/lib/task-utils"
 import type { Task } from "@/lib/types"
 import {
@@ -105,24 +104,23 @@ export default function Dashboard() {
   }
 
   return (
-    <MainLayout>
-      <div className="flex flex-col h-full bg-background">
-        {/* Header */}
-        <header className="border-b bg-card flex-shrink-0">
-          <div className="px-6 py-4">
-            <h1 className="text-2xl font-bold text-foreground">仪表盘</h1>
-            <p className="text-sm text-muted-foreground">项目数据统计与分析</p>
-          </div>
-        </header>
+    <div className="flex flex-col h-full bg-background">
+      {/* Header */}
+      <header className="border-b bg-card flex-shrink-0">
+        <div className="px-6 py-4">
+          <h1 className="text-2xl font-bold text-foreground">仪表盘</h1>
+          <p className="text-sm text-muted-foreground">项目数据统计与分析</p>
+        </div>
+      </header>
 
-        {/* Dashboard Content */}
-        <div className="flex-1 p-6 overflow-auto">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <>
+      {/* Dashboard Content */}
+      <div className="flex-1 p-6 overflow-auto">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <>
               {/* Overview Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <Card>
@@ -345,10 +343,9 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               </div>
-            </>
-          )}
-        </div>
+          </>
+        )}
       </div>
-    </MainLayout>
+    </div>
   )
 }

@@ -10,7 +10,6 @@ import { TaskCard } from "@/components/task-card"
 import { CreateTaskDialog } from "@/components/create-task-dialog"
 import { SearchFilter } from "@/components/search-filter"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
-import { MainLayout } from "@/components/main-layout"
 import type { SettingsData, Task } from "@/lib/types"
 
 const defaultSettings: SettingsData = {
@@ -306,8 +305,7 @@ export default function KanbanBoard() {
   }
 
   return (
-    <MainLayout>
-      <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background">
         {/* Header */}
         <header className="border-b bg-card flex-shrink-0">
           <div className="flex items-center justify-between px-6 py-4">
@@ -455,6 +453,5 @@ export default function KanbanBoard() {
           variant={confirmDialog.variant}
         />
       </div>
-    </MainLayout>
   )
 }
