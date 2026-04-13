@@ -1,147 +1,134 @@
 # 项目管理看板 (Kanban Board)
 
-一个现代化的项目管理看板系统，基于 Next.js 15 构建，提供直观的任务管理、服务配置和团队协作功能。包含仪表盘统计、看板管理和服务配置等核心模块。
+一个基于 **Next.js 15 + React 19 + TypeScript** 的中文项目管理看板。应用以 **本地 `localStorage` 持久化** 为核心，覆盖任务看板、服务登记、分支追踪、GitHub Pull Request 联动和团队概览。
 
-## ✨ 核心功能
+## 功能概览
 
-### 📊 仪表盘统计
-- **数据概览**: 总任务数、完成率、进行中任务、参与人数统计
-- **任务状态分布**: 可视化展示各状态任务的数量和占比
-- **优先级分析**: 高中低优先级任务分布图表
-- **服务任务统计**: 各服务的任务分配情况
-- **团队工作负载**: 成员任务分配和工作量统计
+- **仪表盘**：统计任务数量、完成率、优先级/状态分布、服务与成员工作量
+- **任务看板**：五阶段流转（待规划 → 待开发 → 开发中 → 待审核 → 已完成）、拖拽移动、筛选搜索、批量删除
+- **任务详情**：Markdown 描述编辑、服务分支记录、PR 状态查看、测试/主分支差异追踪
+- **服务管理**：维护服务名称、仓库地址、测试分支、主分支等配置
+- **分支管理**：汇总所有服务分支，发起测试环境 / 生产环境 PR
+- **系统设置**：保存 UI 偏好与多套 GitHub / GitHub Enterprise 配置
 
-### 🎯 任务看板
-- **五阶段工作流**: 待规划 → 待开发 → 开发中 → 待审核 → 已完成
-- **拖拽式操作**: HTML5原生拖拽API实现任务状态流转
-- **智能筛选**: 支持按优先级、负责人、关键词搜索筛选任务
-- **批量操作**: 多选任务批量删除功能
-- **键盘快捷键**: 提升操作效率
-  - `Ctrl+K`: 快速搜索任务
-  - `Ctrl+Shift+A`: 全选任务  
-  - `Ctrl+Shift+D`: 批量删除
-  - `Esc`: 清除选择/筛选
+## 技术栈
 
-### 🔧 服务管理
-- **服务配置**: 管理项目中的所有服务和微服务
-- **Git分支配置**: 支持测试分支和主分支设置
-- **依赖管理**: 记录服务间的依赖关系
-- **任务关联**: 实时统计每个服务的任务数量
-- **仓库链接**: 管理服务对应的代码仓库
+- **框架**：Next.js 15 App Router
+- **UI**：React 19、TypeScript、Tailwind CSS v4、shadcn/ui、Radix UI、Lucide React
+- **编辑器**：`@uiw/react-md-editor`
+- **持久化**：浏览器 `localStorage`
+- **分析**：Vercel Analytics
+- **包管理**：pnpm
 
-### ⚙️ 其他功能
-- **数据持久化**: 基于 localStorage 的本地数据存储
-- **响应式设计**: 完美适配各种设备尺寸
-- **中文界面**: 完整的中文用户界面
-- **实时消息提醒**: Toast通知系统
-
-## 🛠️ 技术栈
-
-### 前端框架
-- **Next.js 15** - React 全栈框架
-- **React 19** - 用户界面构建
-- **TypeScript** - 类型安全的 JavaScript
-
-### 样式设计
-- **Tailwind CSS v4** - 原子化CSS框架
-- **shadcn/ui** - 基于 Radix UI 的组件库
-- **Geist Font** - 现代化字体系统
-- **Lucide React** - 现代化图标库
-
-### 开发工具
-- **pnpm** - 快速、节约磁盘空间的包管理器
-- **ESLint** - 代码质量检查
-- **PostCSS** - CSS处理工具
-- **Vercel Analytics** - 数据分析工具
-
-## 🚀 快速开始
+## 快速开始
 
 ### 环境要求
-- Node.js 18.0 或更高版本
-- pnpm 8.0 或更高版本
+
+- Node.js 18+
+- pnpm 8+
 
 ### 安装依赖
+
 ```bash
 pnpm install
 ```
 
-### 启动开发服务器
+### 启动开发环境
+
 ```bash
 pnpm dev
 ```
 
-访问 [http://localhost:3000](http://localhost:3000) 查看应用
+打开 [http://localhost:3000](http://localhost:3000)。首页会自动跳转到 `/dashboard`。
 
-### 构建生产版本
-```bash
-pnpm build
-pnpm start
-```
+### 质量检查
 
-### 代码检查
 ```bash
 pnpm lint
+pnpm typecheck
+pnpm build
 ```
 
-## 📁 项目结构
+> 当前仓库尚未提供自动化测试套件；交付时以 lint / typecheck / build 作为主要验证手段。
 
-```
-kanban-board/
-├── app/                    # Next.js App Router 页面
-│   ├── page.tsx           # 首页（重定向到仪表盘）
-│   ├── dashboard/         # 仪表盘统计页面
-│   ├── tasks/             # 任务看板页面
-│   ├── services/          # 服务管理页面
-│   ├── branches/          # Git分支管理
-│   ├── settings/          # 系统设置
-│   ├── api/               # API路由
-│   │   └── github/        # GitHub集成API
-│   ├── layout.tsx         # 根布局
-│   └── loading.tsx        # 加载组件
-├── components/            # React 组件
-│   ├── ui/               # shadcn/ui 基础组件
-│   ├── main-layout.tsx   # 主布局组件
-│   ├── sidebar.tsx       # 侧边栏导航
-│   ├── task-card.tsx     # 任务卡片
-│   ├── create-task-dialog.tsx  # 创建任务弹窗
-│   ├── service-manager.tsx     # 服务管理组件
-│   ├── search-filter.tsx       # 搜索筛选组件
-│   └── ...               # 其他业务组件
-├── hooks/                # 自定义 React Hooks
-│   ├── use-local-storage.ts  # localStorage持久化hook
-│   └── use-toast.ts       # 消息提醒hook
-├── lib/                  # 工具函数
-│   └── utils.ts
-├── styles/               # 样式文件
-│   └── globals.css
-├── public/               # 静态资源
-└── package.json
+## 页面与路由
+
+| 路由 | 说明 | 主要组件 |
+| --- | --- | --- |
+| `/` | 启动页，自动跳转到仪表盘 | `app/page.tsx` |
+| `/dashboard` | 数据总览、状态/优先级/服务统计 | `app/dashboard/page.tsx` |
+| `/tasks` | 主看板页面，包含拖拽、筛选、批量操作 | `TaskCard`、`CreateTaskDialog`、`SearchFilter` |
+| `/tasks/[id]` | 单任务详情页，支持 Markdown、服务分支和 PR 状态 | `app/tasks/[id]/page.tsx` |
+| `/services` | 服务登记与仓库配置 | `AddServiceDialog` |
+| `/branches` | 按服务查看分支和部署 PR 流转 | `app/branches/page.tsx` |
+| `/settings` | 偏好设置与 GitHub 配置 | `app/settings/page.tsx` |
+| `/api/github/*` | 服务端 GitHub 代理接口 | `pull-request` / `pr-status` / `branch-diff` / `check-merge-status` |
+
+## 页面导航图
+
+```mermaid
+graph TD
+  Root["/"] --> Dashboard["/dashboard"]
+  Dashboard --> Sidebar["Sidebar 导航"]
+  Sidebar --> Tasks["/tasks"]
+  Sidebar --> Services["/services"]
+  Sidebar --> Branches["/branches"]
+  Sidebar --> Settings["/settings"]
+  Tasks --> TaskDetail["/tasks/[id]"]
 ```
 
-## 🎨 设计系统
+## 数据流图
 
-### 颜色方案
-- **主色调**: 使用CSS自定义属性的主题色系统
-- **组件配色**: 基于shadcn/ui的颜色规范
-- **状态颜色**: 绿色(完成)、黄色(进行中)、紫色(审核)、蓝色(待办)、灰色(待规划)
+```mermaid
+graph LR
+  User[用户操作] --> Page[页面 / 业务组件]
+  Page --> Hook[useLocalStorage]
+  Hook <--> Storage[(localStorage)]
+  Page --> ApiFetch[fetch /api/github/*]
+  ApiFetch --> ApiRoute[Next.js Route Handler]
+  ApiRoute --> GitHub[GitHub / GitHub Enterprise API]
+  Settings[设置页] --> Storage
+  Services[服务页] --> Storage
+  Tasks[任务页] --> Storage
+  Branches[分支页] --> ApiFetch
+  TaskDetail[任务详情页] --> ApiFetch
+```
 
-### 组件规范
-- 基于 **shadcn/ui** 的设计系统
-- **Radix UI** 无障碍组件基础
-- **New York** 风格变体
-- 统一的圆角、间距、字体规范
-- **Geist Sans** 和 **Geist Mono** 字体系统
+## 核心组件关系图
 
-## 💾 数据管理
+```mermaid
+graph TD
+  MainLayout[MainLayout] --> Sidebar
+  DashboardPage[Dashboard Page] --> MainLayout
+  TasksPage[Tasks Page] --> MainLayout
+  ServicesPage[Services Page] --> MainLayout
+  BranchesPage[Branches Page] --> MainLayout
+  SettingsPage[Settings Page] --> MainLayout
 
-### 本地存储
-应用使用 localStorage 进行数据持久化，主要存储：
-- `kanban-tasks`: 任务数据
-- `kanban-services`: 服务配置
-- `kanban-settings`: 用户设置配置
+  TasksPage --> SearchFilter
+  TasksPage --> CreateTaskDialog
+  TasksPage --> TaskCard
+  TaskCard --> TaskDetailDialog
 
-### 数据结构
-```typescript
+  ServicesPage --> AddServiceDialog
+  TaskDetailDialog --> GithubApi[app/api/github/*]
+  BranchesPage --> GithubApi
+  SettingsPage --> GithubConfig[GitHub Configs in localStorage]
+```
+
+## 本地数据模型
+
+所有业务数据都保存在浏览器本地：
+
+| Key | 说明 |
+| --- | --- |
+| `kanban-tasks` | 任务列表，含状态、优先级、负责人、JIRA 链接、服务分支信息 |
+| `kanban-services` | 服务登记信息，含仓库地址、测试分支、主分支 |
+| `kanban-settings` | 用户偏好与 GitHub 配置 |
+
+### Task（摘要）
+
+```ts
 interface Task {
   id: string
   title: string
@@ -149,127 +136,124 @@ interface Task {
   status: "backlog" | "todo" | "in-progress" | "review" | "done"
   priority: "low" | "medium" | "high"
   assignee?: { name: string; avatar?: string }
-  gitBranch?: string
-  serviceId: string
   jiraUrl?: string
+  serviceId?: string
+  serviceBranches?: ServiceBranch[]
+  createdAt?: string
+  updatedAt?: string
 }
+```
 
+### Service（摘要）
+
+```ts
 interface Service {
   id: string
   name: string
   description: string
   repository: string
-  dependencies: string[]
   testBranch: string
   masterBranch: string
 }
 ```
 
-## 🔧 自定义配置
+### GitHubConfig（摘要）
 
-### Next.js 配置
-```javascript
-// next.config.mjs
-const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  images: {
-    unoptimized: true,
-  },
-  experimental: {
-    optimizePackageImports: ['lucide-react'],
-    turbo: {
-      resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.json'],
-    }
-  },
-  // 开发环境热重载优化
-  webpack: (config, { dev, isServer }) => {
-    if (dev && !isServer) {
-      config.watchOptions = {
-        poll: 1000,
-        aggregateTimeout: 300,
-        ignored: /node_modules/,
-      }
-    }
-    return config
-  },
+```ts
+interface GitHubConfig {
+  id: string
+  name: string
+  domain: string
+  owner: string
+  token: string
+  isDefault?: boolean
 }
 ```
 
-### TypeScript
-```json
-{
-  "compilerOptions": {
-    "paths": {
-      "@/*": ["./*"]
-    }
-  }
-}
+## 目录结构
+
+```text
+kanban-board/
+├── app/
+│   ├── api/github/
+│   │   ├── branch-diff/route.ts
+│   │   ├── check-merge-status/route.ts
+│   │   ├── pr-status/route.ts
+│   │   └── pull-request/route.ts
+│   ├── branches/page.tsx
+│   ├── dashboard/page.tsx
+│   ├── services/page.tsx
+│   ├── settings/page.tsx
+│   ├── tasks/
+│   │   ├── [id]/page.tsx
+│   │   └── page.tsx
+│   ├── layout.tsx
+│   ├── loading.tsx
+│   └── page.tsx
+├── components/
+│   ├── ui/                      # shadcn/ui 基础组件
+│   ├── add-service-dialog.tsx
+│   ├── create-task-dialog.tsx
+│   ├── main-layout.tsx
+│   ├── search-filter.tsx
+│   ├── sidebar.tsx
+│   ├── task-card.tsx
+│   └── task-detail-dialog.tsx
+├── hooks/
+│   ├── use-local-storage.ts
+│   ├── use-mobile.ts
+│   └── use-toast.ts
+├── lib/
+│   ├── branch-generator.ts
+│   ├── github-api.ts
+│   └── utils.ts
+├── public/
+├── eslint.config.mjs
+├── next.config.mjs
+├── package.json
+└── README.md
 ```
 
-## 📱 响应式设计
+## 仓库约定（Repository Conventions）
 
-- **移动端优先**: 从小屏幕开始设计
-- **断点**: sm(640px), md(768px), lg(1024px), xl(1280px)
-- **灵活网格**: 看板列数自动适配屏幕尺寸
-- **触摸友好**: 移动设备操作优化
+| 约定 | 说明 |
+| --- | --- |
+| `app/**/page.tsx` | 仅负责页面级组合、状态拼装和路由入口 |
+| `components/ui/*` | shadcn/ui 基础组件，尽量保持无业务语义 |
+| `components/*.tsx` | 业务组件层，承载对话框、卡片、筛选器等交互 |
+| `hooks/use-local-storage.ts` | 本地持久化唯一通用入口；新增持久化字段优先复用这里 |
+| `app/api/github/*` | 与 GitHub 通信的唯一服务端边界；不要在客户端直接持有 token |
+| `lib/*.ts` | 纯工具或无 UI 逻辑的封装，例如分支名生成与通用工具 |
+| `@/*` 路径别名 | 统一通过 `@/` 引用根目录模块，避免深层相对路径 |
+| 中文文案优先 | UI 文字、README 说明、默认提示均以中文为主 |
 
-## 🚀 部署指南
+### 开发时建议遵守
 
-### Vercel (推荐)
-1. 将代码推送到 GitHub
-2. 在 Vercel 中导入项目
-3. 自动部署完成
+1. **页面数据先走本地状态，再落到 `useLocalStorage`**，避免分散直接读写 `window.localStorage`
+2. **GitHub 配置只存在浏览器本地**，客户端调用 `app/api/github/*`，由 Route Handler 代理到 GitHub API
+3. **新增任务 / 服务字段时，同步检查**：页面类型定义、localStorage 读写、任务详情页、统计页和 README 数据模型
+4. **保持页面职责清晰**：路由层组合、组件层交互、`lib/` 层纯逻辑
+5. 仓库中存在少量**未接入当前页面流的原型组件**（例如部分分支/服务管理组件）；新增功能前先确认是否为当前主路径的一部分
 
-### 其他平台
-- **Netlify**: 支持静态导出
-- **Docker**: 可容器化部署
-- **静态托管**: 支持 `next export`
+## GitHub 集成说明
 
-## 🌐 页面结构
+所有 GitHub 请求都通过 `app/api/github/` 下的 Route Handler 转发，支持：
 
-### 主要页面
-- **首页** (`/`) - 自动重定向到仪表盘
-- **仪表盘** (`/dashboard`) - 项目数据统计和可视化分析
-- **任务看板** (`/tasks`) - 拖拽式任务管理看板
-- **服务管理** (`/services`) - 服务配置和管理
-- **Git分支** (`/branches`) - 分支管理工具
-- **设置** (`/settings`) - 系统设置和偏好配置
+- GitHub.com
+- GitHub Enterprise（当 `domain !== github.com` 时，自动走 `https://{domain}/api/v3/...`）
 
-### API路由
-- **GitHub PR** (`/api/github/pull-request`) - GitHub Pull Request集成
+当前接口职责：
 
-## 🤝 贡献指南
+- `POST /api/github/pull-request`：创建 PR
+- `POST /api/github/pr-status`：查询 PR / CI 状态
+- `POST /api/github/branch-diff`：比较分支与测试/主分支差异
+- `POST /api/github/check-merge-status`：检查分支是否已经合并
 
-### 开发规范
-1. 使用 TypeScript 进行类型安全开发
-2. 遵循 ESLint 代码规范
-3. 组件命名使用 PascalCase
-4. 函数命名使用 camelCase
-5. 提交信息使用中文描述
+## 构建与发布
 
-### 提交规范
 ```bash
-git commit -m "feat: 添加任务批量操作功能"
-git commit -m "fix: 修复拖拽排序问题"
-git commit -m "docs: 更新README文档"
+pnpm build
+pnpm start
 ```
 
-## 📄 许可证
-
-[MIT License](LICENSE)
-
-## 🆘 支持
-
-如果你在使用过程中遇到问题：
-1. 查看项目 Issues
-2. 提交新的 Issue
-3. 参与项目讨论
-
----
-
-**让项目管理更简单，让团队协作更高效！** 🎉
+默认输出适用于 Next.js 标准部署。若使用 Vercel，可直接导入仓库部署。

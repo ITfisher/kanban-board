@@ -55,8 +55,7 @@
     "recharts": "2.15.4",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.5",
-    "vaul": "^0.9.9",
-    "zod": "3.25.67"
+    "vaul": "^0.9.9"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",

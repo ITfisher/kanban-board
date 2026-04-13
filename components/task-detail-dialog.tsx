@@ -62,11 +62,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
   const [selectedServiceId, setSelectedServiceId] = useState<string>("")
   const [branchName, setBranchName] = useState<string>(task ? `feature/${task.id}` : "")
 
-  if (!task) return null
-
   useEffect(() => {
-    setBranchName(`feature/${task.id}`)
-  }, [task.id])
+    if (task) {
+      setBranchName(`feature/${task.id}`)
+    }
+  }, [task])
+
+  if (!task) return null
   
   const handleCreateBranch = () => {
     if (!selectedServiceId || !branchName.trim()) {
