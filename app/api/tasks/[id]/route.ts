@@ -64,6 +64,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             serviceName: string
             branchName: string
             pullRequestUrl?: string
+            testPullRequestUrl?: string
+            masterPullRequestUrl?: string
             mergedToTest?: boolean
             mergedToMaster?: boolean
             testMergeDate?: string
@@ -79,6 +81,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             taskId: id,
             branchName: b.branchName,
             pullRequestUrl: b.pullRequestUrl ?? null,
+            testPullRequestUrl: b.testPullRequestUrl ?? null,
+            masterPullRequestUrl: b.masterPullRequestUrl ?? null,
             mergedToTest: b.mergedToTest ? 1 : 0,
             mergedToMaster: b.mergedToMaster ? 1 : 0,
             testMergeDate: b.testMergeDate ?? null,

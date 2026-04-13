@@ -20,6 +20,8 @@ export const serviceBranches = sqliteTable("service_branches", {
   serviceName: text("service_name").notNull(),
   branchName: text("branch_name").notNull(),
   pullRequestUrl: text("pull_request_url"),
+  testPullRequestUrl: text("test_pull_request_url"),
+  masterPullRequestUrl: text("master_pull_request_url"),
   mergedToTest: integer("merged_to_test").notNull().default(0),
   mergedToMaster: integer("merged_to_master").notNull().default(0),
   testMergeDate: text("test_merge_date"),

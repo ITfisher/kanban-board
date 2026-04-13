@@ -443,6 +443,7 @@ export default function TaskDetailPage() {
       await updateBranchState(branchId, {
         mergedToTest: false,
         testMergeDate: null,
+        testPullRequestUrl: pullRequest.html_url,
         pullRequestUrl: pullRequest.html_url,
       })
 
@@ -507,6 +508,7 @@ export default function TaskDetailPage() {
       await updateBranchState(branchId, {
         mergedToMaster: false,
         masterMergeDate: null,
+        masterPullRequestUrl: pullRequest.html_url,
         pullRequestUrl: pullRequest.html_url,
       })
 
@@ -589,11 +591,14 @@ export default function TaskDetailPage() {
       const testStatus = branchStatuses.find((s: BranchStatus) => s.baseBranch === service.testBranch)
       if (testStatus) {
         if (testStatus.pullRequest) {
+          updates.testPullRequestUrl = testStatus.pullRequest.url
           updates.pullRequestUrl = testStatus.pullRequest.url
           updates.mergedToTest = testStatus.pullRequest.merged
           if (testStatus.pullRequest.merged && testStatus.pullRequest.mergedAt) {
             updates.testMergeDate = testStatus.pullRequest.mergedAt
           }
+        } else if (testStatus.isMerged) {
+          updates.mergedToTest = true
         }
         if (testStatus.diffStatus) {
           updates.diffStatus!.test = {
@@ -610,6 +615,7 @@ export default function TaskDetailPage() {
       )
       if (masterStatus) {
         if (masterStatus.pullRequest) {
+          updates.masterPullRequestUrl = masterStatus.pullRequest.url
           if (!updates.pullRequestUrl) {
             updates.pullRequestUrl = masterStatus.pullRequest.url
           }
@@ -617,6 +623,8 @@ export default function TaskDetailPage() {
           if (masterStatus.pullRequest.merged && masterStatus.pullRequest.mergedAt) {
             updates.masterMergeDate = masterStatus.pullRequest.mergedAt
           }
+        } else if (masterStatus.isMerged) {
+          updates.mergedToMaster = true
         }
         if (masterStatus.diffStatus) {
           updates.diffStatus!.master = {

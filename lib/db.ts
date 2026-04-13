@@ -41,6 +41,8 @@ function initSchema(sqlite: Database.Database) {
       service_name TEXT NOT NULL,
       branch_name TEXT NOT NULL,
       pull_request_url TEXT,
+      test_pull_request_url TEXT,
+      master_pull_request_url TEXT,
       merged_to_test INTEGER NOT NULL DEFAULT 0,
       merged_to_master INTEGER NOT NULL DEFAULT 0,
       test_merge_date TEXT,
@@ -85,8 +87,16 @@ function initSchema(sqlite: Database.Database) {
 
   const serviceBranchColumns = sqlite.prepare(`PRAGMA table_info(service_branches)`).all() as Array<{ name: string }>
   const hasServiceIdColumn = serviceBranchColumns.some((column) => column.name === "service_id")
+  const hasTestPullRequestUrlColumn = serviceBranchColumns.some((column) => column.name === "test_pull_request_url")
+  const hasMasterPullRequestUrlColumn = serviceBranchColumns.some((column) => column.name === "master_pull_request_url")
   if (!hasServiceIdColumn) {
     sqlite.exec(`ALTER TABLE service_branches ADD COLUMN service_id TEXT`)
+  }
+  if (!hasTestPullRequestUrlColumn) {
+    sqlite.exec(`ALTER TABLE service_branches ADD COLUMN test_pull_request_url TEXT`)
+  }
+  if (!hasMasterPullRequestUrlColumn) {
+    sqlite.exec(`ALTER TABLE service_branches ADD COLUMN master_pull_request_url TEXT`)
   }
 
   sqlite.exec(`

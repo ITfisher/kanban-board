@@ -77,6 +77,8 @@ export async function POST(request: NextRequest) {
                 serviceName: normalizedService.serviceName,
                 branchName: branch.branchName,
                 pullRequestUrl: branch.pullRequestUrl ?? null,
+                testPullRequestUrl: branch.testPullRequestUrl ?? null,
+                masterPullRequestUrl: branch.masterPullRequestUrl ?? null,
                 mergedToTest: branch.mergedToTest ? 1 : 0,
                 mergedToMaster: branch.mergedToMaster ? 1 : 0,
                 testMergeDate: branch.testMergeDate ?? null,

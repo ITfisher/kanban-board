@@ -45,6 +45,8 @@ export interface ServiceBranch {
   createdAt: string
   lastCommit?: string
   pullRequestUrl?: string
+  testPullRequestUrl?: string
+  masterPullRequestUrl?: string
   mergedToTest?: boolean
   mergedToMaster?: boolean
   testMergeDate?: string
