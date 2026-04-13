@@ -105,7 +105,6 @@ export async function POST(request: NextRequest) {
         if (source.compactView !== undefined) updateData.compactView = source.compactView ? 1 : 0
         if (source.showAssigneeAvatars !== undefined) updateData.showAssigneeAvatars = source.showAssigneeAvatars ? 1 : 0
         if (source.defaultPriority !== undefined) updateData.defaultPriority = source.defaultPriority
-        if (source.autoCreateBranch !== undefined) updateData.autoCreateBranch = source.autoCreateBranch ? 1 : 0
         if (source.branchPrefix !== undefined) updateData.branchPrefix = source.branchPrefix
 
         await tx.update(settings).set(updateData).where(eq(settings.id, "singleton"))

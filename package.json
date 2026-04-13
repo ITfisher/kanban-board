@@ -57,10 +57,13 @@
     "recharts": "2.15.4",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.5",
+    "transliteration": "^2.6.1",
     "vaul": "^0.9.9"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3"]
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",

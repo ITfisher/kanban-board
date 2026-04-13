@@ -10,7 +10,6 @@ function toClientSettings(s: typeof settings.$inferSelect, configs: (typeof gith
     compactView: s.compactView === 1,
     showAssigneeAvatars: s.showAssigneeAvatars === 1,
     defaultPriority: s.defaultPriority,
-    autoCreateBranch: s.autoCreateBranch === 1,
     branchPrefix: s.branchPrefix,
     // Return configs WITHOUT tokens
     githubConfigs: configs.map((c) => ({
@@ -47,7 +46,6 @@ export async function PUT(request: NextRequest) {
       compactView,
       showAssigneeAvatars,
       defaultPriority,
-      autoCreateBranch,
       branchPrefix,
     } = body
 
@@ -57,7 +55,6 @@ export async function PUT(request: NextRequest) {
     if (compactView !== undefined) updateData.compactView = compactView ? 1 : 0
     if (showAssigneeAvatars !== undefined) updateData.showAssigneeAvatars = showAssigneeAvatars ? 1 : 0
     if (defaultPriority !== undefined) updateData.defaultPriority = defaultPriority
-    if (autoCreateBranch !== undefined) updateData.autoCreateBranch = autoCreateBranch ? 1 : 0
     if (branchPrefix !== undefined) updateData.branchPrefix = branchPrefix
 
     await db.update(settings).set(updateData).where(eq(settings.id, "singleton"))
