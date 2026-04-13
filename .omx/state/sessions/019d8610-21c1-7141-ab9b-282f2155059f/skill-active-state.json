@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "active": false,
+  "skill": "team",
+  "keyword": "$team",
+  "phase": "completed",
+  "activated_at": "2026-04-13T09:09:11.163Z",
+  "updated_at": "2026-04-13T09:30:23.837Z",
+  "source": "keyword-detector",
+  "session_id": "019d8610-21c1-7141-ab9b-282f2155059f",
+  "turn_id": "019d8617-6d2b-7412-9ccc-ff9149618d7b",
+  "active_skills": [],
+  "initialized_mode": "team",
+  "initialized_state_path": ".omx/state/team-state.json"
+}

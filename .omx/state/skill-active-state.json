@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "active": false,
+  "skill": "team",
+  "keyword": "$team",
+  "phase": "complete",
+  "activated_at": "2026-04-13T09:30:51.507Z",
+  "updated_at": "2026-04-13T16:00:23.988Z",
+  "source": "keyword-detector",
+  "session_id": "019d8790-ddb2-7a60-a277-4211ca863197",
+  "thread_id": "019d860f-e33f-7b41-93d4-24168d14b37b",
+  "turn_id": "019d8617-6d2b-7412-9ccc-ff9149618d7b",
+  "initialized_mode": "team",
+  "initialized_state_path": ".omx/state/team-state.json",
+  "current_phase": "complete",
+  "completed_at": "2026-04-13T21:46:30+08:00",
+  "task_description": "team skill cleanup after answering auto-save question",
+  "result": "No active team workflow remains for this request.",
+  "active_skills": []
+}

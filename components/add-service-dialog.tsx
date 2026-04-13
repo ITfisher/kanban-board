@@ -8,15 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { X } from "lucide-react"
-
-interface Service {
-  id: string
-  name: string
-  description: string
-  repository: string
-  testBranch: string
-  masterBranch: string
-}
+import type { Service } from "@/lib/types"
 
 interface AddServiceDialogProps {
   onClose: () => void
@@ -37,10 +29,11 @@ export function AddServiceDialog({ onClose, onAddService, existingServices }: Ad
     e.preventDefault()
 
     if (!formData.name.trim()) return
+    if (existingServices.some((service) => service.name === formData.name.trim())) return
 
     const newService: Service = {
       id: Date.now().toString(),
-      name: formData.name,
+      name: formData.name.trim(),
       description: formData.description,
       repository: formData.repository,
       dependencies: [],

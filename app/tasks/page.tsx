@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo, useEffect } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
@@ -10,22 +10,8 @@ import { TaskCard } from "@/components/task-card"
 import { CreateTaskDialog } from "@/components/create-task-dialog"
 import { SearchFilter } from "@/components/search-filter"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
-import { MainLayout } from "@/components/main-layout"
-import { useLocalStorage } from "@/hooks/use-local-storage"
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  status: "backlog" | "todo" | "in-progress" | "review" | "done"
-  priority: "low" | "medium" | "high"
-  assignee?: {
-    name: string
-    avatar?: string
-  }
-  jiraUrl?: string
-}
-
+import { DEFAULT_SETTINGS } from "@/lib/default-settings"
+import type { SettingsData, Task } from "@/lib/types"
 
 const statusColumns = [
   { id: "backlog", title: "待规划", color: "bg-gray-100" },
@@ -36,26 +22,9 @@ const statusColumns = [
 ]
 
 export default function KanbanBoard() {
-  const [tasks, setTasks] = useLocalStorage<Task[]>("kanban-tasks", [])
-  const [settings] = useLocalStorage<{
-    notifications: boolean
-    autoSave: boolean
-    darkMode: boolean
-    compactView: boolean
-    showAssigneeAvatars: boolean
-    defaultPriority: string
-    autoCreateBranch: boolean
-    branchPrefix: string
-  }>("kanban-settings", {
-    notifications: true,
-    autoSave: true,
-    darkMode: false,
-    compactView: false,
-    showAssigneeAvatars: true,
-    defaultPriority: "medium",
-    autoCreateBranch: true,
-    branchPrefix: "feature/",
-  })
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [settings, setSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedPriority, setSelectedPriority] = useState("all")
   const [selectedAssignee, setSelectedAssignee] = useState("all")
@@ -75,6 +44,41 @@ export default function KanbanBoard() {
     onConfirm: () => {},
   })
 
+  const fetchTasks = useCallback(async () => {
+    try {
+      const res = await fetch("/api/tasks")
+      if (!res.ok) throw new Error("Failed to fetch tasks")
+      const data = await res.json()
+      setTasks(data)
+    } catch {
+      toast({ title: "加载任务失败", description: "无法从服务器加载任务", variant: "destructive" })
+    }
+  }, [])
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true)
+      try {
+        const [tasksRes, settingsRes] = await Promise.all([
+          fetch("/api/tasks"),
+          fetch("/api/settings"),
+        ])
+        if (tasksRes.ok) {
+          setTasks(await tasksRes.json())
+        }
+        if (settingsRes.ok) {
+          const s = await settingsRes.json()
+          setSettings((prev) => ({ ...prev, ...s }))
+        }
+      } catch {
+        toast({ title: "加载数据失败", description: "无法从服务器加载数据", variant: "destructive" })
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
+
   const assignees = useMemo(() => {
     if (!tasks) return []
     return [...new Set(tasks.map((task) => task.assignee?.name).filter(Boolean))] as string[]
@@ -82,7 +86,7 @@ export default function KanbanBoard() {
 
   const filteredTasks = useMemo(() => {
     if (!tasks) return []
-    
+
     let filtered = tasks
 
     if (searchTerm) {
@@ -116,48 +120,45 @@ export default function KanbanBoard() {
     setSelectedAssignee("all")
   }
 
-  const handleCreateTask = (newTaskData: Omit<Task, "id">) => {
-    const newTask: Task = {
-      ...newTaskData,
-      id: Date.now().toString(),
+  const handleCreateTask = async (newTaskData: Omit<Task, "id">) => {
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTaskData),
+      })
+      if (!res.ok) throw new Error("Failed to create task")
+      const created = await res.json()
+      setTasks((prev) => [...prev, created])
+      toast({
+        title: "任务创建成功",
+        description: `任务 "${created.title}" 已创建`,
+      })
+    } catch {
+      toast({ title: "创建任务失败", description: "无法创建任务，请重试", variant: "destructive" })
     }
-    setTasks([...tasks, newTask])
-    toast({
-      title: "任务创建成功",
-      description: `任务 "${newTask.title}" 已创建`,
-    })
   }
 
-  const handleUpdateTask = (updatedTask: Task) => {
-    setTasks(tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task)))
-    toast({
-      title: "任务更新成功",
-      description: `任务 "${updatedTask.title}" 已更新`,
-    })
+  const handleUpdateTask = async (updatedTask: Task) => {
+    try {
+      const res = await fetch(`/api/tasks/${updatedTask.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedTask),
+      })
+      if (!res.ok) throw new Error("Failed to update task")
+      const saved = await res.json()
+      setTasks((prev) => prev.map((t) => (t.id === saved.id ? saved : t)))
+      toast({
+        title: "任务更新成功",
+        description: `任务 "${saved.title}" 已更新`,
+      })
+    } catch {
+      toast({ title: "更新任务失败", description: "无法更新任务，请重试", variant: "destructive" })
+    }
   }
 
-  const handleDeleteTask = (taskId: string) => {
-    const task = tasks.find((t) => t.id === taskId)
-    if (!task) return
-
-    setConfirmDialog({
-      open: true,
-      title: "删除任务",
-      description: `确定要删除任务 "${task.title}" 吗？此操作无法撤销。`,
-      variant: "destructive",
-      onConfirm: () => {
-        setTasks(tasks.filter((t) => t.id !== taskId))
-        setSelectedTasks(selectedTasks.filter((id) => id !== taskId))
-        toast({
-          title: "任务删除成功",
-          description: `任务 "${task.title}" 已删除`,
-        })
-        setConfirmDialog({ ...confirmDialog, open: false })
-      },
-    })
-  }
-
-  const handleBatchDelete = () => {
+  const handleBatchDelete = useCallback(() => {
     if (selectedTasks.length === 0) return
 
     setConfirmDialog({
@@ -165,21 +166,33 @@ export default function KanbanBoard() {
       title: "批量删除任务",
       description: `确定要删除选中的 ${selectedTasks.length} 个任务吗？此操作无法撤销。`,
       variant: "destructive",
-      onConfirm: () => {
-        setTasks(tasks.filter((task) => !selectedTasks.includes(task.id)))
-        setSelectedTasks([])
-        toast({
-          title: "批量删除成功",
-          description: `已删除 ${selectedTasks.length} 个任务`,
-        })
-        setConfirmDialog({ ...confirmDialog, open: false })
+      onConfirm: async () => {
+        const count = selectedTasks.length
+        try {
+          const results = await Promise.all(
+            selectedTasks.map((id) =>
+              fetch(`/api/tasks/${id}`, { method: "DELETE" })
+            )
+          )
+
+          const hasFailure = results.some((response) => !response.ok)
+          if (hasFailure) {
+            throw new Error("部分任务删除失败")
+          }
+
+          setTasks((prev) => prev.filter((task) => !selectedTasks.includes(task.id)))
+          setSelectedTasks([])
+          toast({
+            title: "批量删除成功",
+            description: `已删除 ${count} 个任务`,
+          })
+        } catch {
+          toast({ title: "删除任务失败", description: "部分任务删除失败，请重试", variant: "destructive" })
+        }
+        setConfirmDialog((prev) => ({ ...prev, open: false }))
       },
     })
-  }
-
-  const handleUpdateTaskGitBranch = (taskId: string, gitBranch: string) => {
-    setTasks(tasks.map((task) => (task.id === taskId ? { ...task, gitBranch } : task)))
-  }
+  }, [selectedTasks])
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDraggedTaskId(taskId)
@@ -198,26 +211,41 @@ export default function KanbanBoard() {
     }
   }
 
-  const handleDrop = (e: React.DragEvent, newStatus: string) => {
+  const handleDrop = async (e: React.DragEvent, newStatus: string) => {
     e.preventDefault()
     const taskId = e.dataTransfer.getData("text/plain")
 
-    if (taskId && taskId !== draggedTaskId) {
+    if (!taskId || taskId !== draggedTaskId) {
       return
     }
 
     if (draggedTaskId) {
       const task = tasks.find((t) => t.id === draggedTaskId)
-      const updatedTasks = tasks.map((task) =>
-        task.id === draggedTaskId ? { ...task, status: newStatus as Task["status"] } : task,
+      // Optimistic update
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === draggedTaskId ? { ...t, status: newStatus as Task["status"] } : t
+        )
       )
-      setTasks(updatedTasks)
 
-      if (task) {
-        toast({
-          title: "任务状态更新",
-          description: `任务 "${task.title}" 已移动到 "${statusColumns.find((col) => col.id === newStatus)?.title}"`,
+      try {
+        const res = await fetch(`/api/tasks/${draggedTaskId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
         })
+        if (!res.ok) throw new Error("Failed to update status")
+
+        if (task) {
+          toast({
+            title: "任务状态更新",
+            description: `任务 "${task.title}" 已移动到 "${statusColumns.find((col) => col.id === newStatus)?.title}"`,
+          })
+        }
+      } catch {
+        // Revert optimistic update on failure
+        await fetchTasks()
+        toast({ title: "状态更新失败", description: "无法更新任务状态，请重试", variant: "destructive" })
       }
     }
 
@@ -260,15 +288,14 @@ export default function KanbanBoard() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [filteredTasks, selectedTasks])
+  }, [filteredTasks, handleBatchDelete, selectedTasks])
 
   const toggleTaskSelection = (taskId: string) => {
     setSelectedTasks((prev) => (prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]))
   }
 
   return (
-    <MainLayout>
-      <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background">
         {/* Header */}
         <header className="border-b bg-card flex-shrink-0">
           <div className="flex items-center justify-between px-6 py-4">
@@ -290,6 +317,7 @@ export default function KanbanBoard() {
               )}
               <CreateTaskDialog
                 onCreateTask={handleCreateTask}
+                defaultPriority={settings.defaultPriority}
               />
             </div>
           </div>
@@ -311,7 +339,17 @@ export default function KanbanBoard() {
 
         {/* Kanban Board */}
         <div className="flex-1 p-6 overflow-auto">
-          {tasks.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                <svg className="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                <span className="text-sm">加载任务中...</span>
+              </div>
+            </div>
+          ) : tasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="max-w-md">
                 <div className="mb-4">
@@ -325,6 +363,7 @@ export default function KanbanBoard() {
                 </p>
                 <CreateTaskDialog
                   onCreateTask={handleCreateTask}
+                  defaultPriority={settings.defaultPriority}
                 />
               </div>
             </div>
@@ -373,7 +412,6 @@ export default function KanbanBoard() {
                         <TaskCard
                           task={task}
                           onUpdate={handleUpdateTask}
-                          onDelete={handleDeleteTask}
                           isDragging={draggedTaskId === task.id}
                           compactView={settings.compactView}
                           showAssigneeAvatars={settings.showAssigneeAvatars}
@@ -400,13 +438,12 @@ export default function KanbanBoard() {
 
         <ConfirmationDialog
           open={confirmDialog.open}
-          onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+          onOpenChange={(open) => setConfirmDialog((prev) => ({ ...prev, open }))}
           title={confirmDialog.title}
           description={confirmDialog.description}
           onConfirm={confirmDialog.onConfirm}
           variant={confirmDialog.variant}
         />
       </div>
-    </MainLayout>
   )
 }

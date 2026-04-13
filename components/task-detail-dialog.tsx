@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -9,45 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { GitBranch, Calendar, User, Tag, ExternalLink, Plus } from "lucide-react"
 import Link from "next/link"
-import { useLocalStorage } from "@/hooks/use-local-storage"
 import { toast } from "@/hooks/use-toast"
-
-interface ServiceBranch {
-  id: string
-  serviceName: string
-  branchName: string
-  status: "active" | "merged" | "closed"
-  createdAt: string
-  lastCommit?: string
-  pullRequestUrl?: string
-}
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  status: "backlog" | "todo" | "in-progress" | "review" | "done"
-  priority: "low" | "medium" | "high"
-  assignee?: {
-    name: string
-    avatar?: string
-  }
-  jiraUrl?: string
-  serviceId?: string
-  serviceBranches?: ServiceBranch[]
-}
-
-interface Service {
-  id: string
-  name: string
-  description: string
-  repository: string
-  status: "healthy" | "warning" | "error" | "maintenance"
-  techStack: string[]
-  dependencies: string[]
-  testBranch: string
-  masterBranch: string
-}
+import { useAppSettings } from "@/hooks/use-app-settings"
+import { buildTaskBranchName, normalizeBranchPrefix } from "@/lib/branch-name"
+import { buildSmartCheckoutCommand } from "@/lib/git-commands"
+import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
+import type { Service, ServiceBranch, Task } from "@/lib/types"
 
 interface TaskDetailDialogProps {
   task: Task | null
@@ -57,10 +24,24 @@ interface TaskDetailDialogProps {
 }
 
 export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: TaskDetailDialogProps) {
-  const [services] = useLocalStorage<Service[]>("kanban-services", [])
+  const { settings } = useAppSettings()
+  const [services, setServices] = useState<Service[]>([])
   const [showCreateBranch, setShowCreateBranch] = useState(false)
+
+  useEffect(() => {
+    fetch("/api/services")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setServices(data) })
+      .catch(() => {})
+  }, [])
   const [selectedServiceId, setSelectedServiceId] = useState<string>("")
-  const [branchName, setBranchName] = useState<string>(`feature/${task.id}`)
+  const [branchName, setBranchName] = useState<string>(task ? buildTaskBranchName(settings.branchPrefix, task.id) : "")
+
+  useEffect(() => {
+    if (!task) return
+    setSelectedServiceId("")
+    setBranchName(buildTaskBranchName(settings.branchPrefix, task.id))
+  }, [task, settings.branchPrefix])
 
   if (!task) return null
   
@@ -79,16 +60,15 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
 
     const newBranch: ServiceBranch = {
       id: Date.now().toString(),
+      serviceId: selectedService.id,
       serviceName: selectedService.name,
       branchName: branchName,
-      status: "active",
       createdAt: new Date().toISOString(),
     }
 
     const updatedTask: Task = {
       ...task,
       serviceBranches: [...(task.serviceBranches || []), newBranch],
-      serviceId: task.serviceId || selectedServiceId
     }
 
     if (onUpdateTask) {
@@ -102,16 +82,22 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
 
     setShowCreateBranch(false)
     setSelectedServiceId("")
-    setBranchName(`feature/${task.id}`)
+    setBranchName(buildTaskBranchName(settings.branchPrefix, task.id))
   }
 
-  const handleCopyGitCommand = (branchName: string, serviceName: string) => {
-    // 查找对应的服务配置获取master分支名
-    const service = services.find(s => s.name === serviceName)
-    const masterBranch = service?.masterBranch || 'main'
-    
-    // 单行命令：获取远程信息，智能处理三种场景
-    const command = `git fetch origin && (git checkout ${branchName} 2>/dev/null || (git show-ref --verify --quiet refs/remotes/origin/${branchName} && git checkout -b ${branchName} origin/${branchName} || (git checkout -b ${branchName} origin/${masterBranch} && git push -u origin ${branchName})))`
+  const handleCopyGitCommand = (branch: Pick<ServiceBranch, "branchName" | "serviceId" | "serviceName">) => {
+    const service = resolveServiceFromBranch(services, branch)
+    if (!service) {
+      toast({
+        title: "服务配置不存在",
+        description: `找不到服务 "${branch.serviceName}" 的配置`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    const masterBranch = service?.masterBranch || "main"
+    const command = buildSmartCheckoutCommand(branch.branchName, masterBranch)
 
     navigator.clipboard.writeText(command)
     toast({
@@ -152,15 +138,19 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
 
   const getBranchStatusColor = (status: string) => {
     switch (status) {
-      case "active":
+      case "已合并主分支":
         return "bg-green-100 text-green-800"
-      case "merged":
+      case "已合并测试分支":
         return "bg-blue-100 text-blue-800"
-      case "closed":
-        return "bg-gray-100 text-gray-800"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-amber-100 text-amber-800"
     }
+  }
+
+  const getBranchStatusLabel = (branch: ServiceBranch) => {
+    if (branch.mergedToMaster) return "已合并主分支"
+    if (branch.mergedToTest) return "已合并测试分支"
+    return "开发中"
   }
 
   const getStatusText = (status: string) => {
@@ -305,7 +295,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
                     <Label htmlFor="branch-name" className="text-xs">分支名称</Label>
                     <Input
                       id="branch-name"
-                      placeholder={`feature/${task.id}`}
+                      placeholder={`${normalizeBranchPrefix(settings.branchPrefix)}${task.id}`}
                       value={branchName}
                       onChange={(e) => setBranchName(e.target.value)}
                       className="h-8 text-xs font-mono"
@@ -325,7 +315,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
                       onClick={() => {
                         setShowCreateBranch(false)
                         setSelectedServiceId("")
-                        setBranchName(`feature/${task.id}`)
+                        setBranchName(buildTaskBranchName(settings.branchPrefix, task.id))
                       }}
                       className="h-7 text-xs"
                     >
@@ -353,8 +343,8 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
                         >
                           <ExternalLink className="h-3 w-3" />
                         </a>
-                        <Badge className={`text-xs ${getBranchStatusColor(branch.status)}`}>
-                          {branch.status === "active" ? "活跃" : branch.status === "merged" ? "已合并" : "已关闭"}
+                        <Badge className={`text-xs ${getBranchStatusColor(getBranchStatusLabel(branch))}`}>
+                          {getBranchStatusLabel(branch)}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -367,7 +357,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleCopyGitCommand(branch.branchName, branch.serviceName)}
+                        onClick={() => handleCopyGitCommand(branch)}
                         className="h-6 px-2"
                         title="复制Git命令：若分支存在则切换，若不存在则从主分支创建"
                       >

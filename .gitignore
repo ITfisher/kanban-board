@@ -25,3 +25,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.omx/
+.omc/
+
+# SQLite database
+/data/*.db
+/data/*.db-shm
+/data/*.db-wal
+
+# Drizzle migrations (generated)
+/drizzle

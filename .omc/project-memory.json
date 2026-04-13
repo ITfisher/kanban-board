@@ -1,0 +1,428 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1776070569958,
+  "projectRoot": "/Users/panda/Documents/github/kanban-board",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "@sveltejs/kit",
+        "version": "latest",
+        "category": "fullstack"
+      },
+      {
+        "name": "next",
+        "version": "15.2.4",
+        "category": "fullstack"
+      },
+      {
+        "name": "react",
+        "version": "19",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "19",
+        "category": "frontend"
+      },
+      {
+        "name": "svelte",
+        "version": "latest",
+        "category": "frontend"
+      },
+      {
+        "name": "vue",
+        "version": "latest",
+        "category": "frontend"
+      }
+    ],
+    "packageManager": "pnpm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "pnpm build",
+    "testCommand": null,
+    "lintCommand": "pnpm lint",
+    "devCommand": "pnpm dev",
+    "scripts": {
+      "build": "next build",
+      "dev": "next dev",
+      "lint": "next lint",
+      "start": "next start"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase/PascalCase",
+    "importStyle": "ES modules",
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "app",
+      "components",
+      "lib",
+      "public"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "app": {
+      "path": "app",
+      "purpose": "Application code",
+      "fileCount": 4,
+      "lastAccessed": 1776070569938,
+      "keyFiles": [
+        "globals.css",
+        "layout.tsx",
+        "loading.tsx",
+        "page.tsx"
+      ]
+    },
+    "components": {
+      "path": "components",
+      "purpose": "UI components",
+      "fileCount": 12,
+      "lastAccessed": 1776070569938,
+      "keyFiles": [
+        "add-service-dialog.tsx",
+        "branch-name-generator.tsx",
+        "confirmation-dialog.tsx",
+        "create-task-dialog.tsx",
+        "git-branch-manager.tsx"
+      ]
+    },
+    "hooks": {
+      "path": "hooks",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1776070569942,
+      "keyFiles": [
+        "use-local-storage.ts",
+        "use-mobile.ts",
+        "use-toast.ts"
+      ]
+    },
+    "lib": {
+      "path": "lib",
+      "purpose": "Library code",
+      "fileCount": 3,
+      "lastAccessed": 1776070569942,
+      "keyFiles": [
+        "branch-generator.ts",
+        "github-api.ts",
+        "utils.ts"
+      ]
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 5,
+      "lastAccessed": 1776070569943,
+      "keyFiles": [
+        "placeholder-logo.png",
+        "placeholder-logo.svg",
+        "placeholder-user.jpg",
+        "placeholder.jpg",
+        "placeholder.svg"
+      ]
+    },
+    "styles": {
+      "path": "styles",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1776070569943,
+      "keyFiles": [
+        "globals.css"
+      ]
+    },
+    "app/api": {
+      "path": "app/api",
+      "purpose": "API routes",
+      "fileCount": 0,
+      "lastAccessed": 1776070569944,
+      "keyFiles": []
+    },
+    "app/services": {
+      "path": "app/services",
+      "purpose": "Business logic services",
+      "fileCount": 1,
+      "lastAccessed": 1776070569944,
+      "keyFiles": [
+        "page.tsx"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "app/tasks/[id]/page.tsx",
+      "accessCount": 19,
+      "lastAccessed": 1776078212286,
+      "type": "file"
+    },
+    {
+      "path": "components/task-card.tsx",
+      "accessCount": 8,
+      "lastAccessed": 1776078313349,
+      "type": "file"
+    },
+    {
+      "path": "app/tasks/page.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1776077970576,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 5,
+      "lastAccessed": 1776077578026,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/pull-request/route.ts",
+      "accessCount": 5,
+      "lastAccessed": 1776077769356,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/pr-status/route.ts",
+      "accessCount": 5,
+      "lastAccessed": 1776077779602,
+      "type": "file"
+    },
+    {
+      "path": "app/dashboard/page.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1776077947727,
+      "type": "file"
+    },
+    {
+      "path": "app/settings/page.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1776078121273,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/check-merge-status/route.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776077816206,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/branch-diff/route.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776077816351,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 4,
+      "lastAccessed": 1776077905839,
+      "type": "directory"
+    },
+    {
+      "path": "app/branches/page.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1776078007671,
+      "type": "file"
+    },
+    {
+      "path": "app/services/page.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1776078044991,
+      "type": "file"
+    },
+    {
+      "path": "components/task-detail-dialog.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1776078281702,
+      "type": "file"
+    },
+    {
+      "path": "hooks/use-local-storage.ts",
+      "accessCount": 3,
+      "lastAccessed": 1776077138809,
+      "type": "file"
+    },
+    {
+      "path": "lib/github-api.ts",
+      "accessCount": 3,
+      "lastAccessed": 1776077150587,
+      "type": "file"
+    },
+    {
+      "path": "components/add-service-dialog.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1776077905453,
+      "type": "file"
+    },
+    {
+      "path": "components/create-task-dialog.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1776078212734,
+      "type": "file"
+    },
+    {
+      "path": "components/main-layout.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1776078268942,
+      "type": "file"
+    },
+    {
+      "path": "CLAUDE.md",
+      "accessCount": 2,
+      "lastAccessed": 1776070646221,
+      "type": "file"
+    },
+    {
+      "path": "app/page.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1776073175255,
+      "type": "file"
+    },
+    {
+      "path": "app",
+      "accessCount": 1,
+      "lastAccessed": 1776070589067,
+      "type": "directory"
+    },
+    {
+      "path": "components",
+      "accessCount": 1,
+      "lastAccessed": 1776070589470,
+      "type": "directory"
+    },
+    {
+      "path": "hooks",
+      "accessCount": 1,
+      "lastAccessed": 1776070590570,
+      "type": "directory"
+    },
+    {
+      "path": "lib",
+      "accessCount": 1,
+      "lastAccessed": 1776070591304,
+      "type": "directory"
+    },
+    {
+      "path": "lib/branch-generator.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776070600720,
+      "type": "file"
+    },
+    {
+      "path": "app/layout.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776073175434,
+      "type": "file"
+    },
+    {
+      "path": "lib/utils.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776073195086,
+      "type": "file"
+    },
+    {
+      "path": "components/sidebar.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776073207269,
+      "type": "file"
+    },
+    {
+      "path": "app/tasks",
+      "accessCount": 1,
+      "lastAccessed": 1776075375562,
+      "type": "directory"
+    },
+    {
+      "path": "lib/schema.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077620054,
+      "type": "file"
+    },
+    {
+      "path": "lib/db.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077638580,
+      "type": "file"
+    },
+    {
+      "path": "lib/github-utils.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077652743,
+      "type": "file"
+    },
+    {
+      "path": "drizzle.config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077656886,
+      "type": "file"
+    },
+    {
+      "path": "app/api/tasks/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077695967,
+      "type": "file"
+    },
+    {
+      "path": "app/api/tasks/[id]/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077711299,
+      "type": "file"
+    },
+    {
+      "path": "app/api/services/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077716242,
+      "type": "file"
+    },
+    {
+      "path": "app/api/services/[id]/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077726865,
+      "type": "file"
+    },
+    {
+      "path": "app/api/settings/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077735873,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/configs/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077741262,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/configs/[id]/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776077754285,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

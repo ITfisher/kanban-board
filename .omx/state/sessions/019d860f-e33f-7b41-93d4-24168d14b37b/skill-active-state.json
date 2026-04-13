@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "active": true,
+  "skill": "team",
+  "keyword": "$team",
+  "phase": "planning",
+  "activated_at": "2026-04-13T09:02:54.736Z",
+  "updated_at": "2026-04-13T09:06:15.527Z",
+  "source": "keyword-detector",
+  "session_id": "019d860f-e33f-7b41-93d4-24168d14b37b",
+  "thread_id": "",
+  "turn_id": "019d8617-6d2b-7412-9ccc-ff9149618d7b",
+  "active_skills": [
+    {
+      "skill": "team",
+      "phase": "planning",
+      "active": true,
+      "activated_at": "2026-04-13T09:02:54.736Z",
+      "updated_at": "2026-04-13T09:06:15.527Z",
+      "session_id": "019d860f-e33f-7b41-93d4-24168d14b37b",
+      "thread_id": "",
+      "turn_id": "019d8617-6d2b-7412-9ccc-ff9149618d7b"
+    }
+  ],
+  "initialized_mode": "team",
+  "initialized_state_path": ".omx/state/team-state.json"
+}

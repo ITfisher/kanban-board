@@ -1,8 +1,12 @@
+import { slugifyBranchSegment } from "@/lib/branch-name"
+
+export type BranchTaskType = "feature" | "bugfix" | "hotfix" | "refactor" | "docs"
+
 interface BranchGeneratorOptions {
   taskTitle: string
   serviceName: string
   priority?: "low" | "medium" | "high"
-  taskType?: "feature" | "bugfix" | "hotfix" | "refactor" | "docs"
+  taskType?: BranchTaskType
   assignee?: string
   taskId?: string
 }
@@ -13,7 +17,7 @@ interface BranchTemplate {
   description: string
 }
 
-const BRANCH_TEMPLATES: Record<string, BranchTemplate> = {
+const BRANCH_TEMPLATES: Record<BranchTaskType, BranchTemplate> = {
   feature: {
     prefix: "feature",
     pattern: "{prefix}/{service}-{title}-{id}",
@@ -42,73 +46,12 @@ const BRANCH_TEMPLATES: Record<string, BranchTemplate> = {
 }
 
 function cleanForBranchName(text: string): string {
-  return (
-    text
-      .toLowerCase()
-      .trim()
-      // Replace Chinese characters and special characters with hyphens
-      .replace(/[\u4e00-\u9fa5]/g, (match) => {
-        // Convert common Chinese terms to English
-        const chineseToEnglish: Record<string, string> = {
-          用户: "user",
-          登录: "login",
-          注册: "register",
-          管理: "manage",
-          系统: "system",
-          页面: "page",
-          功能: "feature",
-          接口: "api",
-          数据库: "database",
-          前端: "frontend",
-          后端: "backend",
-          服务: "service",
-          认证: "auth",
-          权限: "permission",
-          支付: "payment",
-          订单: "order",
-          商品: "product",
-          列表: "list",
-          详情: "detail",
-          搜索: "search",
-          筛选: "filter",
-          排序: "sort",
-          分页: "pagination",
-          上传: "upload",
-          下载: "download",
-          导入: "import",
-          导出: "export",
-          配置: "config",
-          设置: "settings",
-          优化: "optimize",
-          修复: "fix",
-          更新: "update",
-          删除: "delete",
-          添加: "add",
-          创建: "create",
-          编辑: "edit",
-          查看: "view",
-          保存: "save",
-          取消: "cancel",
-          确认: "confirm",
-          提交: "submit",
-          发布: "publish",
-          部署: "deploy",
-        }
-        return chineseToEnglish[match] || "item"
-      })
-      // Replace spaces and special characters with hyphens
-      .replace(/[^a-z0-9]/g, "-")
-      // Remove multiple consecutive hyphens
-      .replace(/-+/g, "-")
-      // Remove leading and trailing hyphens
-      .replace(/^-+|-+$/g, "")
-      // Limit length to 50 characters
-      .substring(0, 50)
-      .replace(/-+$/, "")
-  ) // Remove trailing hyphens after truncation
+  return slugifyBranchSegment(text)
+    .substring(0, 50)
+    .replace(/-+$/, "")
 }
 
-function detectTaskType(title: string, description: string, priority: string): string {
+function detectTaskType(title: string, description: string, priority: string): BranchTaskType {
   const text = `${title} ${description}`.toLowerCase()
 
   // Check for hotfix indicators
@@ -171,7 +114,7 @@ export function generateBranchName(options: BranchGeneratorOptions): string {
   return branchName
 }
 
-export function getBranchTemplates(): Record<string, BranchTemplate> {
+export function getBranchTemplates(): Record<BranchTaskType, BranchTemplate> {
   return BRANCH_TEMPLATES
 }
 
@@ -179,7 +122,7 @@ export function generateMultiServiceBranches(
   taskTitle: string,
   services: string[],
   options: Partial<BranchGeneratorOptions> = {},
-): Array<{ serviceName: string; branchName: string; taskType: string }> {
+): Array<{ serviceName: string; branchName: string; taskType: BranchTaskType }> {
   return services.map((serviceName) => {
     const branchName = generateBranchName({
       taskTitle,

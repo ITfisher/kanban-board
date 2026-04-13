@@ -11,18 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Plus, Server, Edit, Trash2, ExternalLink, Code, Activity } from "lucide-react"
+import type { Service as BaseService } from "@/lib/types"
 
-interface Service {
-  id: string
-  name: string
-  description: string
-  repository: string
+interface Service extends BaseService {
   status: "healthy" | "warning" | "error" | "maintenance"
   techStack: string[]
-  dependencies: string[]
   taskCount: number
-  testBranch: string
-  masterBranch: string
 }
 
 interface ServiceManagerProps {

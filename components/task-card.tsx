@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -14,47 +14,34 @@ import { Label } from "@/components/ui/label"
 import { GitBranch, Save, X, GripVertical, Plus } from "lucide-react"
 import { TaskDetailDialog } from "./task-detail-dialog"
 import { toast } from "@/hooks/use-toast"
-import { useLocalStorage } from "@/hooks/use-local-storage"
-
-interface ServiceBranch {
-  id: string
-  serviceName: string
-  branchName: string
-  status: "active" | "merged" | "closed"
-  createdAt: string
-  lastCommit?: string
-  pullRequestUrl?: string
-}
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  status: "backlog" | "todo" | "in-progress" | "review" | "done"
-  priority: "low" | "medium" | "high"
-  assignee?: {
-    name: string
-    avatar?: string
-  }
-  jiraUrl?: string
-  serviceBranches?: ServiceBranch[]
-}
+import { useAppSettings } from "@/hooks/use-app-settings"
+import { buildTaskBranchName } from "@/lib/branch-name"
+import { buildSmartCheckoutCommand } from "@/lib/git-commands"
+import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
+import type { Service, ServiceBranch, Task } from "@/lib/types"
 
 
 interface TaskCardProps {
   task: Task
   onUpdate: (task: Task) => void
-  onDelete: (taskId: string) => void
   isDragging?: boolean
   compactView?: boolean
   showAssigneeAvatars?: boolean
 }
 
-export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compactView = false, showAssigneeAvatars = true }: TaskCardProps) {
+export function TaskCard({ task, onUpdate, isDragging = false, compactView = false, showAssigneeAvatars = true }: TaskCardProps) {
+  const { settings } = useAppSettings()
   const [isEditing, setIsEditing] = useState(false)
   const [editedTask, setEditedTask] = useState<Task>(task)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
-  const [services] = useLocalStorage<any[]>("kanban-services", [])
+  const [services, setServices] = useState<Service[]>([])
+
+  useEffect(() => {
+    fetch("/api/services")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setServices(data) })
+      .catch(() => {})
+  }, [])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -71,15 +58,19 @@ export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compact
 
   const getBranchStatusColor = (status: string) => {
     switch (status) {
-      case "active":
+      case "已合并主分支":
         return "bg-green-100 text-green-800"
-      case "merged":
+      case "已合并测试分支":
         return "bg-blue-100 text-blue-800"
-      case "closed":
-        return "bg-gray-100 text-gray-800"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-amber-100 text-amber-800"
     }
+  }
+
+  const getBranchStatusLabel = (branch: ServiceBranch) => {
+    if (branch.mergedToMaster) return "已合并主分支"
+    if (branch.mergedToTest) return "已合并测试分支"
+    return "开发中"
   }
 
   const handleSave = () => {
@@ -93,11 +84,12 @@ export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compact
   }
 
   const handleAddServiceBranch = () => {
+    const defaultService = services[0]
     const newBranch: ServiceBranch = {
       id: Date.now().toString(),
-      serviceName: "默认服务",
-      branchName: `feature/${editedTask.title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
-      status: "active",
+      serviceId: defaultService?.id,
+      serviceName: defaultService?.name || "",
+      branchName: buildTaskBranchName(settings.branchPrefix, editedTask.title, Date.now()),
       createdAt: new Date().toISOString(),
     }
 
@@ -123,13 +115,19 @@ export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compact
     })
   }
 
-  const handleCopyGitCommand = (branchName: string, serviceName: string) => {
-    // 查找对应的服务配置获取master分支名
-    const service = services.find(s => s.name === serviceName)
-    const masterBranch = service?.masterBranch || 'main'
-    
-    // 单行命令：获取远程信息，智能处理三种场景
-    const command = `git fetch origin && (git checkout ${branchName} 2>/dev/null || (git show-ref --verify --quiet refs/remotes/origin/${branchName} && git checkout -b ${branchName} origin/${branchName} || (git checkout -b ${branchName} origin/${masterBranch} && git push -u origin ${branchName})))`
+  const handleCopyGitCommand = (branch: Pick<ServiceBranch, "branchName" | "serviceId" | "serviceName">) => {
+    const service = resolveServiceFromBranch(services, branch)
+    if (!service) {
+      toast({
+        title: "服务配置不存在",
+        description: `找不到服务 "${branch.serviceName}" 的配置`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    const masterBranch = service?.masterBranch || "main"
+    const command = buildSmartCheckoutCommand(branch.branchName, masterBranch)
 
     navigator.clipboard.writeText(command)
     toast({
@@ -209,31 +207,32 @@ export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compact
                   <div key={branch.id} className="border rounded p-2 space-y-2">
                     <div className="grid grid-cols-2 gap-2">
                       <Select
-                        value={branch.serviceName}
-                        onValueChange={(value) => handleUpdateServiceBranch(branch.id, { serviceName: value })}
+                        value={branch.serviceId || ""}
+                        onValueChange={(value) => {
+                          const selectedService = services.find((service) => service.id === value)
+                          if (!selectedService) return
+                          handleUpdateServiceBranch(branch.id, {
+                            serviceId: selectedService.id,
+                            serviceName: selectedService.name,
+                          })
+                        }}
                       >
                         <SelectTrigger className="h-6 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="默认服务">默认服务</SelectItem>
+                          {services.map((service) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                      <Select
-                        value={branch.status}
-                        onValueChange={(value: ServiceBranch["status"]) =>
-                          handleUpdateServiceBranch(branch.id, { status: value })
-                        }
-                      >
-                        <SelectTrigger className="h-6 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="active">活跃</SelectItem>
-                          <SelectItem value="merged">已合并</SelectItem>
-                          <SelectItem value="closed">已关闭</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        value={getBranchStatusLabel(branch)}
+                        disabled
+                        className="h-6 text-xs"
+                      />
                     </div>
                     <div className="flex gap-2">
                       <Input
@@ -245,7 +244,7 @@ export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compact
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleCopyGitCommand(branch.branchName, branch.serviceName)}
+                        onClick={() => handleCopyGitCommand(branch)}
                         className="h-6 w-6 p-0"
                         title="复制Git命令：若分支存在则切换，若不存在则从主分支创建"
                       >
@@ -337,8 +336,8 @@ export function TaskCard({ task, onUpdate, onDelete, isDragging = false, compact
                       <GitBranch className="h-3 w-3 text-muted-foreground" />
                       <span className="font-medium text-muted-foreground">{branch.serviceName}:</span>
                       <span className="font-mono flex-1 truncate">{branch.branchName}</span>
-                      <Badge className={`text-xs ${getBranchStatusColor(branch.status)}`}>
-                        {branch.status === "active" ? "活跃" : branch.status === "merged" ? "已合并" : "已关闭"}
+                      <Badge className={`text-xs ${getBranchStatusColor(getBranchStatusLabel(branch))}`}>
+                        {getBranchStatusLabel(branch)}
                       </Badge>
                     </div>
                   ))}
