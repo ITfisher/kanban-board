@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -60,7 +60,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
   const [services] = useLocalStorage<Service[]>("kanban-services", [])
   const [showCreateBranch, setShowCreateBranch] = useState(false)
   const [selectedServiceId, setSelectedServiceId] = useState<string>("")
-  const [branchName, setBranchName] = useState<string>(`feature/${task.id}`)
+  const [branchName, setBranchName] = useState<string>(task ? `feature/${task.id}` : "")
+
+  useEffect(() => {
+    if (!task) return
+    setSelectedServiceId("")
+    setBranchName(`feature/${task.id}`)
+  }, [task])
 
   if (!task) return null
   

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo, useEffect } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
@@ -136,28 +136,7 @@ export default function KanbanBoard() {
     })
   }
 
-  const handleDeleteTask = (taskId: string) => {
-    const task = tasks.find((t) => t.id === taskId)
-    if (!task) return
-
-    setConfirmDialog({
-      open: true,
-      title: "删除任务",
-      description: `确定要删除任务 "${task.title}" 吗？此操作无法撤销。`,
-      variant: "destructive",
-      onConfirm: () => {
-        setTasks(tasks.filter((t) => t.id !== taskId))
-        setSelectedTasks(selectedTasks.filter((id) => id !== taskId))
-        toast({
-          title: "任务删除成功",
-          description: `任务 "${task.title}" 已删除`,
-        })
-        setConfirmDialog({ ...confirmDialog, open: false })
-      },
-    })
-  }
-
-  const handleBatchDelete = () => {
+  const handleBatchDelete = useCallback(() => {
     if (selectedTasks.length === 0) return
 
     setConfirmDialog({
@@ -175,11 +154,7 @@ export default function KanbanBoard() {
         setConfirmDialog({ ...confirmDialog, open: false })
       },
     })
-  }
-
-  const handleUpdateTaskGitBranch = (taskId: string, gitBranch: string) => {
-    setTasks(tasks.map((task) => (task.id === taskId ? { ...task, gitBranch } : task)))
-  }
+  }, [confirmDialog, selectedTasks, setTasks, tasks])
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDraggedTaskId(taskId)
@@ -260,7 +235,7 @@ export default function KanbanBoard() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [filteredTasks, selectedTasks])
+  }, [filteredTasks, handleBatchDelete, selectedTasks])
 
   const toggleTaskSelection = (taskId: string) => {
     setSelectedTasks((prev) => (prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]))
@@ -373,7 +348,6 @@ export default function KanbanBoard() {
                         <TaskCard
                           task={task}
                           onUpdate={handleUpdateTask}
-                          onDelete={handleDeleteTask}
                           isDragging={draggedTaskId === task.id}
                           compactView={settings.compactView}
                           showAssigneeAvatars={settings.showAssigneeAvatars}

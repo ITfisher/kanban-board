@@ -9,7 +9,6 @@ import { useLocalStorage } from "@/hooks/use-local-storage"
 import { 
   BarChart3, 
   TrendingUp, 
-  Clock, 
   Users, 
   CheckCircle, 
   AlertCircle,
@@ -88,7 +87,7 @@ export default function Dashboard() {
       activeTasksCount,
       servicesCount: Object.keys(serviceCounts).length
     }
-  }, [tasks])
+  }, [services, tasks])
 
   const getStatusColor = (status: string) => {
     switch (status) {
