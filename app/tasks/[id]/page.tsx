@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
+import { buildSmartCheckoutCommand } from "@/lib/git-commands"
+import type { BranchStatus, GitHubConfigMeta, Service, ServiceBranch, Task } from "@/lib/types"
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
 import {
@@ -25,107 +27,8 @@ import {
   RefreshCw,
 } from "lucide-react"
 
-interface Task {
-  id: string
-  title: string
-  description: string
-  status: "backlog" | "todo" | "in-progress" | "review" | "done"
-  priority: "low" | "medium" | "high"
-  assignee?: {
-    name: string
-    avatar?: string
-  }
-  jiraUrl?: string
-  serviceBranches?: ServiceBranch[]
-  createdAt?: string
-  updatedAt?: string
-}
-
-interface ServiceBranch {
-  id: string
-  taskId?: string
-  serviceName: string
-  branchName: string
-  createdAt: string
-  lastCommit?: string
-  pullRequestUrl?: string
-  mergedToTest?: boolean
-  mergedToMaster?: boolean
-  testMergeDate?: string
-  masterMergeDate?: string
-  prStatus?: {
-    number: number
-    state: 'open' | 'closed'
-    merged: boolean
-    mergeable: boolean | null
-    mergeable_state: string
-    merged_at: string | null
-    base_ref: string
-    head_ref: string
-    head_sha: string
-    html_url: string
-    checks?: {
-      state: 'pending' | 'success' | 'failure' | 'error'
-      conclusion: string | null
-      total_count: number
-      completed_count: number
-      failed_count: number
-    }
-  }
-  lastStatusCheck?: string
-  diffStatus?: {
-    test?: {
-      status: string
-      aheadBy: number
-      behindBy: number
-      totalCommits: number
-    }
-    master?: {
-      status: string
-      aheadBy: number
-      behindBy: number
-      totalCommits: number
-    }
-  }
-}
-
-interface Service {
-  id: string
-  name: string
-  repository?: string
-  testBranch?: string
-  masterBranch?: string
-}
-
-interface GitHubConfigMeta {
-  id: string
-  name: string
-  domain: string
-  owner: string
-  isDefault?: boolean
-}
-
 interface Settings {
   githubConfigs: GitHubConfigMeta[]
-}
-
-interface BranchStatus {
-  baseBranch: string
-  isMerged: boolean
-  diffStatus?: {
-    status: string
-    aheadBy: number
-    behindBy: number
-    totalCommits: number
-  }
-  pullRequest?: {
-    number: number
-    title: string
-    state: string
-    merged: boolean
-    mergedAt: string | null
-    url: string
-  }
 }
 
 export default function TaskDetailPage() {
@@ -234,6 +137,9 @@ export default function TaskDetailPage() {
 
             if (response.ok) {
               const prStatus = await response.json()
+              const service = services.find((item) => item.name === branch.serviceName)
+              const testBranch = service?.testBranch
+              const masterBranch = service?.masterBranch
 
               const idx = updatedBranches.findIndex((b) => b.id === branch.id)
               if (idx !== -1) {
@@ -242,12 +148,13 @@ export default function TaskDetailPage() {
                   prStatus,
                   lastStatusCheck: new Date().toISOString(),
                   mergedToTest:
-                    prStatus.merged && prStatus.base_ref?.includes("test")
+                    prStatus.merged && testBranch && prStatus.base_ref === testBranch
                       ? true
                       : updatedBranches[idx].mergedToTest,
                   mergedToMaster:
                     prStatus.merged &&
-                    (prStatus.base_ref === "master" || prStatus.base_ref === "main")
+                    masterBranch &&
+                    prStatus.base_ref === masterBranch
                       ? true
                       : updatedBranches[idx].mergedToMaster,
                 }
@@ -427,9 +334,7 @@ export default function TaskDetailPage() {
       return
     }
 
-    const masterBranch = service.masterBranch
-
-    const command = `git fetch origin && (git checkout ${branchName} 2>/dev/null || (git show-ref --verify --quiet refs/remotes/origin/${branchName} && git checkout -b ${branchName} origin/${branchName} || (git checkout -b ${branchName} origin/${masterBranch} && git push -u origin ${branchName})))`
+    const command = buildSmartCheckoutCommand(branchName, service.masterBranch)
 
     navigator.clipboard.writeText(command)
     toast({
@@ -480,8 +385,8 @@ export default function TaskDetailPage() {
         b.id === branchId
           ? {
               ...b,
-              mergedToTest: true,
-              testMergeDate: new Date().toISOString(),
+              mergedToTest: false,
+              testMergeDate: undefined,
               pullRequestUrl: pullRequest.html_url,
             }
           : b
@@ -553,8 +458,8 @@ export default function TaskDetailPage() {
         b.id === branchId
           ? {
               ...b,
-              mergedToMaster: true,
-              masterMergeDate: new Date().toISOString(),
+              mergedToMaster: false,
+              masterMergeDate: undefined,
               pullRequestUrl: pullRequest.html_url,
             }
           : b

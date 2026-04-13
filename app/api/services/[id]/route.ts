@@ -2,18 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { services } from "@/lib/schema"
-
-function toClientService(s: typeof services.$inferSelect) {
-  return {
-    id: s.id,
-    name: s.name,
-    description: s.description,
-    repository: s.repository,
-    testBranch: s.testBranch,
-    masterBranch: s.masterBranch,
-    dependencies: JSON.parse(s.dependencies) as string[],
-  }
-}
+import { toClientService } from "@/lib/service-data"
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

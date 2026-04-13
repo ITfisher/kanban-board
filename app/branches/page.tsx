@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
+import type { Service, ServiceBranch, Task } from "@/lib/types"
 import {
   GitBranch,
   CheckCircle,
@@ -19,42 +20,9 @@ import {
   Server
 } from "lucide-react"
 
-interface ServiceBranch {
-  id: string
-  serviceName: string
-  branchName: string
-  createdAt: string
-  lastCommit?: string
-  pullRequestUrl?: string
-  mergedToTest?: boolean
-  mergedToMaster?: boolean
-  testMergeDate?: string
-  masterMergeDate?: string
+interface BranchWithTask extends ServiceBranch {
   taskId?: string
   taskTitle?: string
-}
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  status: "backlog" | "todo" | "in-progress" | "review" | "done"
-  priority: "low" | "medium" | "high"
-  assignee?: {
-    name: string
-    avatar?: string
-  }
-  serviceBranches?: ServiceBranch[]
-  service?: string
-}
-
-interface Service {
-  id: string
-  name: string
-  description: string
-  repository?: string
-  masterBranch?: string
-  testBranch?: string
 }
 
 export default function BranchesPage() {
@@ -91,8 +59,8 @@ export default function BranchesPage() {
   }, [])
 
   // 获取当前服务的所有分支
-  const getServiceBranches = (): ServiceBranch[] => {
-    const branches: ServiceBranch[] = []
+  const getServiceBranches = (): BranchWithTask[] => {
+    const branches: BranchWithTask[] = []
 
     tasks.forEach(task => {
       if (task.serviceBranches) {
@@ -166,25 +134,33 @@ export default function BranchesPage() {
     return response.json()
   }
 
-  const handleMergeToTest = async (branch: ServiceBranch) => {
+  const handleMergeToTest = async (branch: BranchWithTask) => {
     const mergeId = `${branch.id}-test`
     setMergingBranches(prev => new Set(prev).add(mergeId))
 
     try {
-      await createPullRequest(
+      const service = services.find((item) => item.name === branch.serviceName)
+      const testBranch = service?.testBranch
+
+      if (!testBranch) {
+        throw new Error(`服务 "${branch.serviceName}" 未配置测试分支`)
+      }
+
+      const pullRequest = await createPullRequest(
         branch.serviceName,
         `[TEST][${branch.taskTitle}] Deploy to Test Environment`,
         branch.branchName,
-        "test",
-        `🔄 **测试环境部署 Pull Request**\n\n**任务**: ${branch.taskTitle}\n**分支**: ${branch.branchName}\n**目标**: 测试环境 (test)\n\n⚠️ **注意**: 此PR仅用于测试环境部署，不会影响线上环境。\n\n请审核代码质量和功能完整性后合并到测试环境进行验证。`
+        testBranch,
+        `🔄 **测试环境部署 Pull Request**\n\n**任务**: ${branch.taskTitle}\n**分支**: ${branch.branchName}\n**目标**: 测试环境 (${testBranch})\n\n⚠️ **注意**: 此PR仅用于测试环境部署，不会影响线上环境。\n\n请审核代码质量和功能完整性后合并到测试环境进行验证。`
       )
 
-      // Update branch mergedToTest status in task
       if (branch.taskId) {
         const task = tasks.find(t => t.id === branch.taskId)
         if (task?.serviceBranches) {
           const updatedBranches = task.serviceBranches.map(b =>
-            b.id === branch.id ? { ...b, mergedToTest: true, testMergeDate: new Date().toISOString() } : b
+            b.id === branch.id
+              ? { ...b, pullRequestUrl: pullRequest.html_url, mergedToTest: false, testMergeDate: undefined }
+              : b
           )
           await updateTaskBranches(branch.taskId, updatedBranches)
         }
@@ -209,25 +185,33 @@ export default function BranchesPage() {
     }
   }
 
-  const handleMergeToMaster = async (branch: ServiceBranch) => {
+  const handleMergeToMaster = async (branch: BranchWithTask) => {
     const mergeId = `${branch.id}-master`
     setMergingBranches(prev => new Set(prev).add(mergeId))
 
     try {
-      await createPullRequest(
+      const service = services.find((item) => item.name === branch.serviceName)
+      const masterBranch = service?.masterBranch
+
+      if (!masterBranch) {
+        throw new Error(`服务 "${branch.serviceName}" 未配置主分支`)
+      }
+
+      const pullRequest = await createPullRequest(
         branch.serviceName,
         `[PROD][${branch.taskTitle}] Deploy to Production Environment`,
         branch.branchName,
-        "master",
-        `🚀 **线上环境部署 Pull Request**\n\n**任务**: ${branch.taskTitle}\n**分支**: ${branch.branchName}\n**目标**: 线上环境 (master)\n\n✅ **状态**: ${branch.mergedToTest ? '已通过测试环境验证' : '⚠️ 未验证测试环境'}\n\n🔒 **部署要求**:\n- 代码已在测试环境充分验证\n- 功能测试通过\n- 性能测试通过\n- 安全审查通过\n\n⚠️ **重要**: 此为线上环境部署，请仔细审核后合并。`
+        masterBranch,
+        `🚀 **线上环境部署 Pull Request**\n\n**任务**: ${branch.taskTitle}\n**分支**: ${branch.branchName}\n**目标**: 线上环境 (${masterBranch})\n\n✅ **状态**: ${branch.mergedToTest ? '已通过测试环境验证' : '⚠️ 未验证测试环境'}\n\n🔒 **部署要求**:\n- 代码已在测试环境充分验证\n- 功能测试通过\n- 性能测试通过\n- 安全审查通过\n\n⚠️ **重要**: 此为线上环境部署，请仔细审核后合并。`
       )
 
-      // Update branch mergedToMaster status in task
       if (branch.taskId) {
         const task = tasks.find(t => t.id === branch.taskId)
         if (task?.serviceBranches) {
           const updatedBranches = task.serviceBranches.map(b =>
-            b.id === branch.id ? { ...b, mergedToMaster: true, masterMergeDate: new Date().toISOString() } : b
+            b.id === branch.id
+              ? { ...b, pullRequestUrl: pullRequest.html_url, mergedToMaster: false, masterMergeDate: undefined }
+              : b
           )
           await updateTaskBranches(branch.taskId, updatedBranches)
         }

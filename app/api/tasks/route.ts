@@ -2,37 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { tasks, serviceBranches } from "@/lib/schema"
-
-// Convert DB row to frontend Task shape
-function toClientTask(task: typeof tasks.$inferSelect, branches: (typeof serviceBranches.$inferSelect)[]) {
-  return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    status: task.status,
-    priority: task.priority,
-    assignee: task.assigneeName ? { name: task.assigneeName, avatar: task.assigneeAvatar ?? undefined } : undefined,
-    jiraUrl: task.jiraUrl ?? undefined,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    serviceBranches: branches.map((b) => ({
-      id: b.id,
-      taskId: b.taskId,
-      serviceName: b.serviceName,
-      branchName: b.branchName,
-      pullRequestUrl: b.pullRequestUrl ?? undefined,
-      mergedToTest: b.mergedToTest === 1,
-      mergedToMaster: b.mergedToMaster === 1,
-      testMergeDate: b.testMergeDate ?? undefined,
-      masterMergeDate: b.masterMergeDate ?? undefined,
-      lastCommit: b.lastCommit ?? undefined,
-      lastStatusCheck: b.lastStatusCheck ?? undefined,
-      prStatus: b.prStatus ? JSON.parse(b.prStatus) : undefined,
-      diffStatus: b.diffStatus ? JSON.parse(b.diffStatus) : undefined,
-      createdAt: b.createdAt,
-    })),
-  }
-}
+import { toClientTask } from "@/lib/task-data"
+import type { ServiceBranch, Task } from "@/lib/types"
 
 export async function GET() {
   try {
@@ -54,17 +25,92 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { title, description = "", status = "backlog", priority = "medium", assignee, jiraUrl } = body
+
+    if (Array.isArray(body)) {
+      const importedTasks = body as Task[]
+
+      const hasInvalidTask = importedTasks.some((task) => !task.title?.trim())
+      if (hasInvalidTask) {
+        return NextResponse.json({ error: "导入数据中存在空任务标题" }, { status: 400 })
+      }
+
+      await db.delete(tasks)
+
+      if (importedTasks.length > 0) {
+        await db.insert(tasks).values(
+          importedTasks.map((task) => {
+            const now = new Date().toISOString()
+
+            return {
+              id: task.id || crypto.randomUUID(),
+              title: task.title.trim(),
+              description: task.description ?? "",
+              status: task.status ?? "backlog",
+              priority: task.priority ?? "medium",
+              assigneeName: task.assignee?.name ?? null,
+              assigneeAvatar: task.assignee?.avatar ?? null,
+              jiraUrl: task.jiraUrl ?? null,
+              createdAt: task.createdAt ?? now,
+              updatedAt: task.updatedAt ?? now,
+            }
+          })
+        )
+
+        const importedBranches = importedTasks.flatMap((task) =>
+          (task.serviceBranches ?? []).map((branch): typeof serviceBranches.$inferInsert => ({
+            id: branch.id || crypto.randomUUID(),
+            taskId: task.id,
+            serviceName: branch.serviceName,
+            branchName: branch.branchName,
+            pullRequestUrl: branch.pullRequestUrl ?? null,
+            mergedToTest: branch.mergedToTest ? 1 : 0,
+            mergedToMaster: branch.mergedToMaster ? 1 : 0,
+            testMergeDate: branch.testMergeDate ?? null,
+            masterMergeDate: branch.masterMergeDate ?? null,
+            lastCommit: branch.lastCommit ?? null,
+            lastStatusCheck: branch.lastStatusCheck ?? null,
+            prStatus: branch.prStatus ? JSON.stringify(branch.prStatus) : null,
+            diffStatus: branch.diffStatus ? JSON.stringify(branch.diffStatus) : null,
+            createdAt: branch.createdAt ?? task.createdAt ?? new Date().toISOString(),
+          }))
+        )
+
+        if (importedBranches.length > 0) {
+          await db.insert(serviceBranches).values(importedBranches)
+        }
+      }
+
+      const allTasks = await db.select().from(tasks).orderBy(tasks.createdAt)
+      const allBranches = await db.select().from(serviceBranches)
+
+      return NextResponse.json(
+        allTasks.map((task) => toClientTask(task, allBranches.filter((branch) => branch.taskId === task.id))),
+        { status: 201 }
+      )
+    }
+
+    const {
+      id,
+      title,
+      description = "",
+      status = "backlog",
+      priority = "medium",
+      assignee,
+      jiraUrl,
+      createdAt,
+      updatedAt,
+      serviceBranches: incomingBranches = [],
+    } = body as Task & { serviceBranches?: ServiceBranch[] }
 
     if (!title?.trim()) {
       return NextResponse.json({ error: "任务标题不能为空" }, { status: 400 })
     }
 
     const now = new Date().toISOString()
-    const id = crypto.randomUUID()
+    const taskId = id || crypto.randomUUID()
 
     await db.insert(tasks).values({
-      id,
+      id: taskId,
       title: title.trim(),
       description,
       status,
@@ -72,12 +118,34 @@ export async function POST(request: NextRequest) {
       assigneeName: assignee?.name ?? null,
       assigneeAvatar: assignee?.avatar ?? null,
       jiraUrl: jiraUrl ?? null,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: createdAt ?? now,
+      updatedAt: updatedAt ?? now,
     })
 
-    const created = await db.select().from(tasks).where(eq(tasks.id, id))
-    return NextResponse.json(toClientTask(created[0], []), { status: 201 })
+    if (incomingBranches.length > 0) {
+      await db.insert(serviceBranches).values(
+        incomingBranches.map((branch) => ({
+          id: branch.id || crypto.randomUUID(),
+          taskId,
+          serviceName: branch.serviceName,
+          branchName: branch.branchName,
+          pullRequestUrl: branch.pullRequestUrl ?? null,
+          mergedToTest: branch.mergedToTest ? 1 : 0,
+          mergedToMaster: branch.mergedToMaster ? 1 : 0,
+          testMergeDate: branch.testMergeDate ?? null,
+          masterMergeDate: branch.masterMergeDate ?? null,
+          lastCommit: branch.lastCommit ?? null,
+          lastStatusCheck: branch.lastStatusCheck ?? null,
+          prStatus: branch.prStatus ? JSON.stringify(branch.prStatus) : null,
+          diffStatus: branch.diffStatus ? JSON.stringify(branch.diffStatus) : null,
+          createdAt: branch.createdAt ?? createdAt ?? now,
+        }))
+      )
+    }
+
+    const created = await db.select().from(tasks).where(eq(tasks.id, taskId))
+    const createdBranches = await db.select().from(serviceBranches).where(eq(serviceBranches.taskId, taskId))
+    return NextResponse.json(toClientTask(created[0], createdBranches), { status: 201 })
   } catch (error) {
     console.error("POST /api/tasks error:", error)
     return NextResponse.json({ error: "创建任务失败" }, { status: 500 })

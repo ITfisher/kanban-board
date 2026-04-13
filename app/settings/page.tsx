@@ -12,25 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "@/hooks/use-toast"
 import { Settings, Save, Download, Upload, Trash2, Key, Plus, Edit2, Check, X } from "lucide-react"
-
-interface GitHubConfig {
-  id: string
-  name: string
-  domain: string
-  owner: string
-  isDefault?: boolean
-}
-
-interface SettingsData {
-  notifications: boolean
-  autoSave: boolean
-  darkMode: boolean
-  compactView: boolean
-  showAssigneeAvatars: boolean
-  defaultPriority: string
-  autoCreateBranch: boolean
-  branchPrefix: string
-}
+import type { GitHubConfigMeta, SettingsData } from "@/lib/types"
 
 interface EditingConfig {
   name: string
@@ -55,7 +37,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
   const [originalSettings, setOriginalSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
   const [hasChanges, setHasChanges] = useState(false)
-  const [githubConfigs, setGithubConfigs] = useState<GitHubConfig[]>([])
+  const [githubConfigs, setGithubConfigs] = useState<GitHubConfigMeta[]>([])
   const [editingGithub, setEditingGithub] = useState<string | null>(null)
   const [editingConfigForm, setEditingConfigForm] = useState<EditingConfig>({ name: "", domain: "", owner: "", token: "" })
   const [newGithubConfig, setNewGithubConfig] = useState<EditingConfig>({
@@ -128,7 +110,7 @@ export default function SettingsPage() {
     }
   }
 
-  const handleEditGithubStart = (config: GitHubConfig) => {
+  const handleEditGithubStart = (config: GitHubConfigMeta) => {
     setEditingGithub(config.id)
     setEditingConfigForm({ name: config.name, domain: config.domain, owner: config.owner, token: "" })
   }
@@ -245,10 +227,9 @@ export default function SettingsPage() {
     reader.onload = async (e) => {
       try {
         const importData = JSON.parse(e.target?.result as string)
-
-        const promises: Promise<Response>[] = []
+        const importRequests: Promise<Response>[] = []
         if (importData.tasks) {
-          promises.push(
+          importRequests.push(
             fetch("/api/tasks", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -257,7 +238,7 @@ export default function SettingsPage() {
           )
         }
         if (importData.services) {
-          promises.push(
+          importRequests.push(
             fetch("/api/services", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -270,7 +251,8 @@ export default function SettingsPage() {
           void _ignored
           const importedSettings = { ...DEFAULT_SETTINGS, ...settingsOnly }
           setSettings(importedSettings)
-          promises.push(
+          setOriginalSettings(importedSettings)
+          importRequests.push(
             fetch("/api/settings", {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
@@ -279,7 +261,15 @@ export default function SettingsPage() {
           )
         }
 
-        await Promise.allSettled(promises)
+        const results = await Promise.allSettled(importRequests)
+        const failedResponses = results.filter(
+          (result): result is PromiseFulfilledResult<Response> => result.status === "fulfilled" && !result.value.ok
+        )
+        const rejectedRequests = results.filter((result) => result.status === "rejected")
+
+        if (failedResponses.length > 0 || rejectedRequests.length > 0) {
+          throw new Error("部分数据导入失败")
+        }
 
         toast({
           title: "数据导入成功",

@@ -5,6 +5,8 @@ import { useMemo, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { MainLayout } from "@/components/main-layout"
+import { getTaskServiceNames } from "@/lib/task-utils"
+import type { Task } from "@/lib/types"
 import {
   BarChart3,
   TrendingUp,
@@ -16,47 +18,15 @@ import {
   Loader2
 } from "lucide-react"
 
-interface Task {
-  id: string
-  title: string
-  description: string
-  status: "backlog" | "todo" | "in-progress" | "review" | "done"
-  priority: "low" | "medium" | "high"
-  assignee?: {
-    name: string
-    avatar?: string
-  }
-  gitBranch?: string
-  serviceId: string
-}
-
-interface Service {
-  id: string
-  name: string
-  description: string
-  repository: string
-  status: "healthy" | "warning" | "error" | "maintenance"
-  owner: string
-  techStack: string[]
-  dependencies: string[]
-  lastDeployment: string
-  version: string
-}
-
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
-  const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [tasksRes, servicesRes] = await Promise.all([
-          fetch("/api/tasks"),
-          fetch("/api/services"),
-        ])
+        const [tasksRes] = await Promise.all([fetch("/api/tasks")])
         if (tasksRes.ok) setTasks(await tasksRes.json())
-        if (servicesRes.ok) setServices(await servicesRes.json())
       } finally {
         setLoading(false)
       }
@@ -76,9 +46,17 @@ export default function Dashboard() {
     }, {} as Record<string, number>)
 
     const serviceCounts = tasks.reduce((acc, task) => {
-      const service = services.find(s => s.id === task.serviceId)
-      const serviceName = service?.name || "未知服务"
-      acc[serviceName] = (acc[serviceName] || 0) + 1
+      const serviceNames = getTaskServiceNames(task)
+
+      if (serviceNames.length === 0) {
+        acc["未关联服务"] = (acc["未关联服务"] || 0) + 1
+        return acc
+      }
+
+      serviceNames.forEach((serviceName) => {
+        acc[serviceName] = (acc[serviceName] || 0) + 1
+      })
+
       return acc
     }, {} as Record<string, number>)
 
@@ -104,7 +82,7 @@ export default function Dashboard() {
       activeTasksCount,
       servicesCount: Object.keys(serviceCounts).length
     }
-  }, [services, tasks])
+  }, [tasks])
 
   const getStatusColor = (status: string) => {
     switch (status) {

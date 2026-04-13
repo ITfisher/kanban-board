@@ -11,43 +11,9 @@ import { CreateTaskDialog } from "@/components/create-task-dialog"
 import { SearchFilter } from "@/components/search-filter"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { MainLayout } from "@/components/main-layout"
+import type { SettingsData, Task } from "@/lib/types"
 
-interface ServiceBranch {
-  id: string
-  serviceName: string
-  branchName: string
-  status: "active" | "merged" | "closed"
-  createdAt: string
-  lastCommit?: string
-  pullRequestUrl?: string
-}
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  status: "backlog" | "todo" | "in-progress" | "review" | "done"
-  priority: "low" | "medium" | "high"
-  assignee?: {
-    name: string
-    avatar?: string
-  }
-  jiraUrl?: string
-  serviceBranches?: ServiceBranch[]
-}
-
-interface Settings {
-  notifications: boolean
-  autoSave: boolean
-  darkMode: boolean
-  compactView: boolean
-  showAssigneeAvatars: boolean
-  defaultPriority: string
-  autoCreateBranch: boolean
-  branchPrefix: string
-}
-
-const defaultSettings: Settings = {
+const defaultSettings: SettingsData = {
   notifications: true,
   autoSave: true,
   darkMode: false,
@@ -68,7 +34,7 @@ const statusColumns = [
 
 export default function KanbanBoard() {
   const [tasks, setTasks] = useState<Task[]>([])
-  const [settings, setSettings] = useState<Settings>(defaultSettings)
+  const [settings, setSettings] = useState<SettingsData>(defaultSettings)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedPriority, setSelectedPriority] = useState("all")
@@ -214,11 +180,17 @@ export default function KanbanBoard() {
       onConfirm: async () => {
         const count = selectedTasks.length
         try {
-          await Promise.all(
+          const results = await Promise.all(
             selectedTasks.map((id) =>
               fetch(`/api/tasks/${id}`, { method: "DELETE" })
             )
           )
+
+          const hasFailure = results.some((response) => !response.ok)
+          if (hasFailure) {
+            throw new Error("部分任务删除失败")
+          }
+
           setTasks((prev) => prev.filter((task) => !selectedTasks.includes(task.id)))
           setSelectedTasks([])
           toast({

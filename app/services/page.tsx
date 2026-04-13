@@ -8,32 +8,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { MainLayout } from "@/components/main-layout"
 import { toast } from "@/hooks/use-toast"
+import { getServiceTaskCount } from "@/lib/task-utils"
+import type { Service, Task } from "@/lib/types"
 import { Server, Plus, Activity, GitBranch, Loader2, Edit2, Trash2, X, Check } from "lucide-react"
 import { AddServiceDialog } from "@/components/add-service-dialog"
-
-interface Service {
-  id: string
-  name: string
-  description: string
-  repository: string
-  dependencies: string[]
-  testBranch: string
-  masterBranch: string
-}
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  status: "backlog" | "todo" | "in-progress" | "review" | "done"
-  priority: "low" | "medium" | "high"
-  assignee?: {
-    name: string
-    avatar?: string
-  }
-  gitBranch?: string
-  serviceId: string
-}
 
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([])
@@ -59,10 +37,6 @@ export default function ServicesPage() {
     }
     fetchData()
   }, [])
-
-  const getServiceTaskCount = (serviceId: string) => {
-    return tasks.filter(task => task.serviceId === serviceId).length
-  }
 
   const handleAddService = async (newService: Service) => {
     const res = await fetch("/api/services", {
@@ -296,7 +270,7 @@ export default function ServicesPage() {
                           <div className="flex items-center gap-2">
                             <Activity className="h-4 w-4 text-muted-foreground" />
                             <span className="text-muted-foreground">任务:</span>
-                            <span className="font-medium">{getServiceTaskCount(service.id)}</span>
+                            <span className="font-medium">{getServiceTaskCount(tasks, service.name)}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <GitBranch className="h-4 w-4 text-muted-foreground" />

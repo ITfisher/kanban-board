@@ -2,18 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { services } from "@/lib/schema"
-
-function toClientService(s: typeof services.$inferSelect) {
-  return {
-    id: s.id,
-    name: s.name,
-    description: s.description,
-    repository: s.repository,
-    testBranch: s.testBranch,
-    masterBranch: s.masterBranch,
-    dependencies: JSON.parse(s.dependencies) as string[],
-  }
-}
+import { toClientService } from "@/lib/service-data"
+import type { Service } from "@/lib/types"
 
 export async function GET() {
   try {
@@ -28,7 +18,44 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, description = "", repository = "", testBranch = "develop", masterBranch = "main", dependencies = [] } = body
+
+    if (Array.isArray(body)) {
+      const importedServices = body as Service[]
+      const hasInvalidService = importedServices.some((service) => !service.name?.trim())
+
+      if (hasInvalidService) {
+        return NextResponse.json({ error: "导入数据中存在空服务名称" }, { status: 400 })
+      }
+
+      await db.delete(services)
+
+      if (importedServices.length > 0) {
+        await db.insert(services).values(
+          importedServices.map((service) => ({
+            id: service.id || crypto.randomUUID(),
+            name: service.name.trim(),
+            description: service.description ?? "",
+            repository: service.repository ?? "",
+            testBranch: service.testBranch ?? "develop",
+            masterBranch: service.masterBranch ?? "main",
+            dependencies: JSON.stringify(service.dependencies ?? []),
+          }))
+        )
+      }
+
+      const all = await db.select().from(services).orderBy(services.name)
+      return NextResponse.json(all.map(toClientService), { status: 201 })
+    }
+
+    const {
+      id,
+      name,
+      description = "",
+      repository = "",
+      testBranch = "develop",
+      masterBranch = "main",
+      dependencies = [],
+    } = body as Service
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "服务名称不能为空" }, { status: 400 })
@@ -40,9 +67,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "服务名称已存在" }, { status: 409 })
     }
 
-    const id = crypto.randomUUID()
+    const serviceId = id || crypto.randomUUID()
     await db.insert(services).values({
-      id,
+      id: serviceId,
       name: name.trim(),
       description,
       repository,
@@ -51,7 +78,7 @@ export async function POST(request: NextRequest) {
       dependencies: JSON.stringify(dependencies),
     })
 
-    const created = await db.select().from(services).where(eq(services.id, id))
+    const created = await db.select().from(services).where(eq(services.id, serviceId))
     return NextResponse.json(toClientService(created[0]), { status: 201 })
   } catch (error) {
     console.error("POST /api/services error:", error)

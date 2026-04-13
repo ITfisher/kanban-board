@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils"
 import { LayoutDashboard, Server, GitBranch, Settings, ChevronLeft, ChevronRight, Kanban, BarChart3 } from "lucide-react"
 
 interface SidebarProps {
-  taskCounts?: Record<string, number>
+  taskCount?: number
+  activeServiceCount?: number
 }
 
 const navigation = [
@@ -45,11 +46,9 @@ const navigation = [
   },
 ]
 
-export function Sidebar({ taskCounts = {} }: SidebarProps) {
+export function Sidebar({ taskCount = 0, activeServiceCount = 0 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
-
-  const totalTasks = Object.values(taskCounts).reduce((sum, count) => sum + count, 0)
 
   return (
     <div
@@ -97,9 +96,9 @@ export function Sidebar({ taskCounts = {} }: SidebarProps) {
                   {!collapsed && (
                     <>
                       <span className="flex-1">{item.name}</span>
-                      {item.name === "任务管理" && totalTasks > 0 && (
+                      {item.name === "任务管理" && taskCount > 0 && (
                         <Badge variant="secondary" className="text-xs">
-                          {totalTasks}
+                          {taskCount}
                         </Badge>
                       )}
                     </>
@@ -125,11 +124,11 @@ export function Sidebar({ taskCounts = {} }: SidebarProps) {
           <div className="text-xs text-muted-foreground space-y-1">
             <div className="flex justify-between">
               <span>总任务数:</span>
-              <span className="font-medium">{totalTasks}</span>
+              <span className="font-medium">{taskCount}</span>
             </div>
             <div className="flex justify-between">
               <span>活跃服务:</span>
-              <span className="font-medium">{Object.keys(taskCounts).length}</span>
+              <span className="font-medium">{activeServiceCount}</span>
             </div>
           </div>
         </div>

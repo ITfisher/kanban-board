@@ -2,36 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { tasks, serviceBranches } from "@/lib/schema"
-
-function toClientTask(task: typeof tasks.$inferSelect, branches: (typeof serviceBranches.$inferSelect)[]) {
-  return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    status: task.status,
-    priority: task.priority,
-    assignee: task.assigneeName ? { name: task.assigneeName, avatar: task.assigneeAvatar ?? undefined } : undefined,
-    jiraUrl: task.jiraUrl ?? undefined,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    serviceBranches: branches.map((b) => ({
-      id: b.id,
-      taskId: b.taskId,
-      serviceName: b.serviceName,
-      branchName: b.branchName,
-      pullRequestUrl: b.pullRequestUrl ?? undefined,
-      mergedToTest: b.mergedToTest === 1,
-      mergedToMaster: b.mergedToMaster === 1,
-      testMergeDate: b.testMergeDate ?? undefined,
-      masterMergeDate: b.masterMergeDate ?? undefined,
-      lastCommit: b.lastCommit ?? undefined,
-      lastStatusCheck: b.lastStatusCheck ?? undefined,
-      prStatus: b.prStatus ? JSON.parse(b.prStatus) : undefined,
-      diffStatus: b.diffStatus ? JSON.parse(b.diffStatus) : undefined,
-      createdAt: b.createdAt,
-    })),
-  }
-}
+import { toClientTask } from "@/lib/task-data"
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -60,7 +31,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const { title, description, status, priority, assignee, jiraUrl, serviceBranches: incomingBranches } = body
 
-    // Update task fields
     const updateData: Partial<typeof tasks.$inferInsert> = {
       updatedAt: new Date().toISOString(),
     }
@@ -76,9 +46,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     await db.update(tasks).set(updateData).where(eq(tasks.id, id))
 
-    // If serviceBranches is provided, sync them
     if (incomingBranches !== undefined) {
-      // Delete all existing branches for this task and reinsert
       await db.delete(serviceBranches).where(eq(serviceBranches.taskId, id))
 
       if (Array.isArray(incomingBranches) && incomingBranches.length > 0) {
