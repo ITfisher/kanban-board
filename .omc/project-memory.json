@@ -453,6 +453,30 @@
       "accessCount": 1,
       "lastAccessed": 1776077754285,
       "type": "file"
+    },
+    {
+      "path": "scripts/docker-deploy.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776165373433,
+      "type": "file"
+    },
+    {
+      "path": "docker-compose.yml",
+      "accessCount": 1,
+      "lastAccessed": 1776165373671,
+      "type": "file"
+    },
+    {
+      "path": "Dockerfile",
+      "accessCount": 1,
+      "lastAccessed": 1776165375981,
+      "type": "file"
+    },
+    {
+      "path": "scripts/upgrade.sh",
+      "accessCount": 1,
+      "lastAccessed": 1776165403673,
+      "type": "file"
     }
   ],
   "userDirectives": []
