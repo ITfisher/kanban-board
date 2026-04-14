@@ -35,62 +35,67 @@ export async function POST(request: NextRequest) {
         name: service.name,
       }))
 
-      await db.delete(tasks)
+      db.transaction((tx) => {
+        tx.delete(serviceBranches).run()
+        tx.delete(tasks).run()
 
-      if (importedTasks.length > 0) {
-        const now = new Date().toISOString()
-        const normalizedTasks = importedTasks.map((task) => ({
-          ...task,
-          id: task.id || crypto.randomUUID(),
-          createdAt: task.createdAt ?? now,
-          updatedAt: task.updatedAt ?? now,
-        }))
+        if (importedTasks.length > 0) {
+          const now = new Date().toISOString()
+          const normalizedTasks = importedTasks.map((task) => ({
+            ...task,
+            id: task.id || crypto.randomUUID(),
+            createdAt: task.createdAt ?? now,
+            updatedAt: task.updatedAt ?? now,
+          }))
 
-        await db.insert(tasks).values(
-          normalizedTasks.map((task) => {
-            return {
-              id: task.id,
-              title: task.title.trim(),
-              description: task.description ?? "",
-              status: task.status ?? "backlog",
-              priority: task.priority ?? "medium",
-              assigneeName: task.assignee?.name ?? null,
-              assigneeAvatar: task.assignee?.avatar ?? null,
-              jiraUrl: task.jiraUrl ?? null,
-              createdAt: task.createdAt,
-              updatedAt: task.updatedAt,
-            }
-          })
-        )
+          tx.insert(tasks).values(
+            normalizedTasks.map((task) => {
+              return {
+                id: task.id,
+                title: task.title.trim(),
+                description: task.description ?? "",
+                status: task.status ?? "backlog",
+                priority: task.priority ?? "medium",
+                assigneeName: task.assignee?.name ?? null,
+                assigneeAvatar: task.assignee?.avatar ?? null,
+                jiraUrl: task.jiraUrl ?? null,
+                createdAt: task.createdAt,
+                updatedAt: task.updatedAt,
+              }
+            })
+          ).run()
 
-        const importedBranches = normalizedTasks.flatMap((task) =>
-          (task.serviceBranches ?? []).map((branch): typeof serviceBranches.$inferInsert => {
-            const normalizedService = requireBranchService(existingServices, branch)
+          const importedBranches = normalizedTasks.flatMap((task) =>
+            (task.serviceBranches ?? []).map((branch): typeof serviceBranches.$inferInsert => {
+              const normalizedService = requireBranchService(existingServices, branch)
 
-            return {
-              id: branch.id || crypto.randomUUID(),
-              taskId: task.id,
-              serviceId: normalizedService.serviceId ?? null,
-              serviceName: normalizedService.serviceName,
-              branchName: branch.branchName,
-              pullRequestUrl: branch.pullRequestUrl ?? null,
-              mergedToTest: branch.mergedToTest ? 1 : 0,
-              mergedToMaster: branch.mergedToMaster ? 1 : 0,
-              testMergeDate: branch.testMergeDate ?? null,
-              masterMergeDate: branch.masterMergeDate ?? null,
-              lastCommit: branch.lastCommit ?? null,
-              lastStatusCheck: branch.lastStatusCheck ?? null,
-              prStatus: branch.prStatus ? JSON.stringify(branch.prStatus) : null,
-              diffStatus: branch.diffStatus ? JSON.stringify(branch.diffStatus) : null,
-              createdAt: branch.createdAt ?? task.createdAt ?? new Date().toISOString(),
-            }
-          })
-        )
+              return {
+                id: branch.id || crypto.randomUUID(),
+                taskId: task.id,
+                serviceId: normalizedService.serviceId ?? null,
+                serviceName: normalizedService.serviceName,
+                branchName: branch.branchName,
+                pullRequestUrl: branch.pullRequestUrl ?? null,
+                testPullRequestUrl: branch.testPullRequestUrl ?? null,
+                masterPullRequestUrl: branch.masterPullRequestUrl ?? null,
+                mergedToTest: branch.mergedToTest ? 1 : 0,
+                mergedToMaster: branch.mergedToMaster ? 1 : 0,
+                testMergeDate: branch.testMergeDate ?? null,
+                masterMergeDate: branch.masterMergeDate ?? null,
+                lastCommit: branch.lastCommit ?? null,
+                lastStatusCheck: branch.lastStatusCheck ?? null,
+                prStatus: branch.prStatus ? JSON.stringify(branch.prStatus) : null,
+                diffStatus: branch.diffStatus ? JSON.stringify(branch.diffStatus) : null,
+                createdAt: branch.createdAt ?? task.createdAt ?? new Date().toISOString(),
+              }
+            })
+          )
 
-        if (importedBranches.length > 0) {
-          await db.insert(serviceBranches).values(importedBranches)
+          if (importedBranches.length > 0) {
+            tx.insert(serviceBranches).values(importedBranches).run()
+          }
         }
-      }
+      })
 
       const allTasks = await db.select().from(tasks).orderBy(tasks.createdAt)
       const allBranches = await db.select().from(serviceBranches)
@@ -150,6 +155,8 @@ export async function POST(request: NextRequest) {
             serviceName: normalizedService.serviceName,
             branchName: branch.branchName,
             pullRequestUrl: branch.pullRequestUrl ?? null,
+            testPullRequestUrl: branch.testPullRequestUrl ?? null,
+            masterPullRequestUrl: branch.masterPullRequestUrl ?? null,
             mergedToTest: branch.mergedToTest ? 1 : 0,
             mergedToMaster: branch.mergedToMaster ? 1 : 0,
             testMergeDate: branch.testMergeDate ?? null,

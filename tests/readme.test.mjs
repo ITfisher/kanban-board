@@ -24,11 +24,22 @@ const expectedApiRoutes = [
 
 const expectedSections = [
   "## ✨ 功能概览",
+  "## Docker 部署",
   "## 🌐 页面地图",
   "## 🔄 数据流",
   "## 🧩 核心组件协作图",
   "## 📁 仓库约定",
   "## ✅ 推荐验证命令",
+]
+
+const expectedDocs = [
+  "Dockerfile",
+  "docker-compose.yml",
+  "scripts/docker-deploy.sh",
+  "data/kanban.db",
+  "docker compose up -d --build",
+  "首次启动时自动创建",
+  "不使用外键约束",
 ]
 
 test("README documents the required architecture sections", () => {
@@ -48,9 +59,9 @@ test("README route map stays aligned with actual page files", () => {
   }
 })
 
-test("README captures persisted keys and GitHub API endpoints", () => {
-  for (const storageKey of ["kanban-tasks", "kanban-services", "kanban-settings"]) {
-    assert.match(readme, new RegExp(storageKey))
+test("README captures Docker and SQLite persistence guidance", () => {
+  for (const docEntry of expectedDocs) {
+    assert.match(readme, new RegExp(docEntry.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))
   }
 
   for (const apiFile of expectedApiRoutes) {

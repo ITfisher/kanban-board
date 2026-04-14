@@ -10,17 +10,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const importData = validateBackupData(body)
 
-    await db.transaction(async (tx) => {
-      let availableServices = (await tx.select().from(services)).map((service) => ({
+    db.transaction((tx) => {
+      let availableServices = tx.select().from(services).all().map((service) => ({
         id: service.id,
         name: service.name,
       }))
 
       if (importData.services !== undefined) {
-        await tx.delete(services)
+        tx.delete(services).run()
 
         if (importData.services.length > 0) {
-          await tx.insert(services).values(
+          tx.insert(services).values(
             importData.services.map((service) => ({
               id: service.id || crypto.randomUUID(),
               name: service.name.trim(),
@@ -30,17 +30,18 @@ export async function POST(request: NextRequest) {
               masterBranch: service.masterBranch ?? "main",
               dependencies: JSON.stringify(service.dependencies ?? []),
             }))
-          )
+          ).run()
         }
 
-        availableServices = (await tx.select().from(services)).map((service) => ({
+        availableServices = tx.select().from(services).all().map((service) => ({
           id: service.id,
           name: service.name,
         }))
       }
 
       if (importData.tasks !== undefined) {
-        await tx.delete(tasks)
+        tx.delete(serviceBranches).run()
+        tx.delete(tasks).run()
 
         if (importData.tasks.length > 0) {
           const now = new Date().toISOString()
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
             updatedAt: task.updatedAt ?? now,
           }))
 
-          await tx.insert(tasks).values(
+          tx.insert(tasks).values(
             normalizedTasks.map((task) => ({
               id: task.id,
               title: task.title.trim(),
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
               createdAt: task.createdAt,
               updatedAt: task.updatedAt,
             }))
-          )
+          ).run()
 
           const importedBranches = normalizedTasks.flatMap((task) =>
             (task.serviceBranches ?? []).map((branch) => {
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
           )
 
           if (importedBranches.length > 0) {
-            await tx.insert(serviceBranches).values(importedBranches)
+            tx.insert(serviceBranches).values(importedBranches).run()
           }
         }
       }
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
         if (source.defaultPriority !== undefined) updateData.defaultPriority = source.defaultPriority
         if (source.branchPrefix !== undefined) updateData.branchPrefix = source.branchPrefix
 
-        await tx.update(settings).set(updateData).where(eq(settings.id, "singleton"))
+        tx.update(settings).set(updateData).where(eq(settings.id, "singleton")).run()
       }
     })
 

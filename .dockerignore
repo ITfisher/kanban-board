@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.idea
+.omx
+.omc
+.claude
+data/*.db
+data/*.db-shm
+data/*.db-wal
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
