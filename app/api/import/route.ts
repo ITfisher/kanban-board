@@ -4,6 +4,14 @@ import { db } from "@/lib/db"
 import { validateBackupData } from "@/lib/import-export"
 import { serviceBranches, services, settings, tasks } from "@/lib/schema"
 import { requireBranchService } from "@/lib/service-branch-utils"
+import { isCompletedTaskStatus, normalizeTaskStatus } from "@/lib/task-status"
+
+function getCompletedAtForStatus(status: string, previousCompletedAt?: string | null) {
+  if (isCompletedTaskStatus(normalizeTaskStatus(status))) {
+    return previousCompletedAt ?? new Date().toISOString()
+  }
+  return null
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +58,8 @@ export async function POST(request: NextRequest) {
             id: task.id || crypto.randomUUID(),
             createdAt: task.createdAt ?? now,
             updatedAt: task.updatedAt ?? now,
+            status: normalizeTaskStatus(task.status),
+            completedAt: getCompletedAtForStatus(task.status ?? "backlog", task.completedAt ?? null),
           }))
 
           tx.insert(tasks).values(
@@ -64,6 +74,7 @@ export async function POST(request: NextRequest) {
               jiraUrl: task.jiraUrl ?? null,
               createdAt: task.createdAt,
               updatedAt: task.updatedAt,
+              completedAt: task.completedAt ?? null,
             }))
           ).run()
 

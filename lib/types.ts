@@ -1,4 +1,4 @@
-export type TaskStatus = "backlog" | "todo" | "in-progress" | "review" | "done"
+export type TaskStatus = "backlog" | "todo" | "in-progress" | "testing" | "done" | "closed"
 
 export type TaskPriority = "low" | "medium" | "high"
 
@@ -70,6 +70,7 @@ export interface Task {
   serviceBranches?: ServiceBranch[]
   createdAt?: string
   updatedAt?: string
+  completedAt?: string
 }
 
 export interface Service {

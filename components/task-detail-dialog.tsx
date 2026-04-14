@@ -14,6 +14,7 @@ import { useAppSettings } from "@/hooks/use-app-settings"
 import { buildTaskBranchName, normalizeBranchPrefix } from "@/lib/branch-name"
 import { buildSmartCheckoutCommand } from "@/lib/git-commands"
 import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
+import { TASK_STATUS_LABELS } from "@/lib/task-status"
 import type { Service, ServiceBranch, Task } from "@/lib/types"
 
 interface TaskDetailDialogProps {
@@ -127,10 +128,12 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
         return "bg-blue-100 text-blue-800"
       case "in-progress":
         return "bg-orange-100 text-orange-800"
-      case "review":
+      case "testing":
         return "bg-purple-100 text-purple-800"
       case "done":
         return "bg-green-100 text-green-800"
+      case "closed":
+        return "bg-zinc-200 text-zinc-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -154,20 +157,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
   }
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case "backlog":
-        return "待规划"
-      case "todo":
-        return "待开发"
-      case "in-progress":
-        return "开发中"
-      case "review":
-        return "待审核"
-      case "done":
-        return "已完成"
-      default:
-        return status
-    }
+    return TASK_STATUS_LABELS[status as keyof typeof TASK_STATUS_LABELS] || status
   }
 
   return (

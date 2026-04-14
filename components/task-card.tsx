@@ -298,7 +298,7 @@ export function TaskCard({ task, onUpdate, isDragging = false, compactView = fal
   return (
     <>
       <Card
-        className={`cursor-pointer hover:shadow-md transition-all duration-200 group ${
+        className={`group cursor-pointer overflow-hidden hover:shadow-md transition-all duration-200 ${
           isDragging ? "opacity-50 rotate-1 scale-105 shadow-lg" : ""
         }`}
         draggable={!isEditing}
@@ -306,10 +306,10 @@ export function TaskCard({ task, onUpdate, isDragging = false, compactView = fal
         onClick={handleCardClick}
       >
         <CardHeader className={compactView ? "pb-1 px-3 pt-3" : "pb-2"}>
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-2 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-1 items-start gap-2">
               <GripVertical className={`${compactView ? "h-3 w-3" : "h-4 w-4"} text-muted-foreground mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab`} />
-              <CardTitle className={`${compactView ? "text-xs" : "text-sm"} font-medium text-balance leading-tight flex-1 hover:text-primary transition-colors`}>
+              <CardTitle className={`${compactView ? "text-xs" : "text-sm"} line-clamp-2 min-w-0 break-words font-medium leading-tight hover:text-primary transition-colors`}>
                 {task.title}
               </CardTitle>
             </div>
@@ -317,7 +317,9 @@ export function TaskCard({ task, onUpdate, isDragging = false, compactView = fal
         </CardHeader>
         <CardContent className={compactView ? "pt-0 px-3 pb-3" : "pt-0"}>
           {!compactView && (
-            <p className="text-xs text-muted-foreground mb-3 text-pretty leading-relaxed">{task.description}</p>
+            <p className="mb-3 line-clamp-3 break-words text-xs leading-relaxed text-muted-foreground">
+              {task.description}
+            </p>
           )}
 
           <div className={compactView ? "space-y-1" : "space-y-2"}>
@@ -332,11 +334,11 @@ export function TaskCard({ task, onUpdate, isDragging = false, compactView = fal
                 <div className="text-xs text-muted-foreground">服务分支:</div>
                 <div className="space-y-1 max-h-20 overflow-y-auto">
                   {task.serviceBranches.slice(0, 2).map((branch) => (
-                    <div key={branch.id} className="flex items-center gap-1 text-xs bg-muted/50 rounded px-2 py-1">
+                    <div key={branch.id} className="flex min-w-0 items-center gap-1 rounded bg-muted/50 px-2 py-1 text-xs">
                       <GitBranch className="h-3 w-3 text-muted-foreground" />
-                      <span className="font-medium text-muted-foreground">{branch.serviceName}:</span>
-                      <span className="font-mono flex-1 truncate">{branch.branchName}</span>
-                      <Badge className={`text-xs ${getBranchStatusColor(getBranchStatusLabel(branch))}`}>
+                      <span className="shrink-0 font-medium text-muted-foreground">{branch.serviceName}:</span>
+                      <span className="min-w-0 flex-1 truncate font-mono">{branch.branchName}</span>
+                      <Badge className={`max-w-[96px] shrink-0 truncate text-xs ${getBranchStatusColor(getBranchStatusLabel(branch))}`}>
                         {getBranchStatusLabel(branch)}
                       </Badge>
                     </div>
@@ -367,7 +369,7 @@ export function TaskCard({ task, onUpdate, isDragging = false, compactView = fal
                     <AvatarFallback className="text-xs">{task.assignee.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   {!compactView && (
-                    <span className="text-xs text-muted-foreground">{task.assignee.name}</span>
+                    <span className="truncate text-xs text-muted-foreground">{task.assignee.name}</span>
                   )}
                 </div>
               )}

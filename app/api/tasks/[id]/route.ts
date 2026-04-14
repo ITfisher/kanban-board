@@ -3,7 +3,15 @@ import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { tasks, serviceBranches, services } from "@/lib/schema"
 import { requireBranchService } from "@/lib/service-branch-utils"
+import { isCompletedTaskStatus, normalizeTaskStatus } from "@/lib/task-status"
 import { toClientTask } from "@/lib/task-data"
+
+function getCompletedAtForStatus(status: unknown, previousCompletedAt?: string | null) {
+  if (isCompletedTaskStatus(typeof status === "string" ? normalizeTaskStatus(status) : null)) {
+    return previousCompletedAt ?? new Date().toISOString()
+  }
+  return null
+}
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -37,7 +45,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
     if (title !== undefined) updateData.title = title.trim()
     if (description !== undefined) updateData.description = description
-    if (status !== undefined) updateData.status = status
+    if (status !== undefined) {
+      updateData.status = normalizeTaskStatus(status)
+      updateData.completedAt = getCompletedAtForStatus(status, taskRows[0].completedAt)
+    }
     if (priority !== undefined) updateData.priority = priority
     if (assignee !== undefined) {
       updateData.assigneeName = assignee?.name ?? null

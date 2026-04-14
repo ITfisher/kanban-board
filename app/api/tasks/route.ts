@@ -4,8 +4,16 @@ import { db } from "@/lib/db"
 import { tasks, serviceBranches, services } from "@/lib/schema"
 import { validateTaskList } from "@/lib/import-export"
 import { requireBranchService } from "@/lib/service-branch-utils"
+import { isCompletedTaskStatus, normalizeTaskStatus } from "@/lib/task-status"
 import { toClientTask } from "@/lib/task-data"
 import type { ServiceBranch, Task } from "@/lib/types"
+
+function getCompletedAtForStatus(status: Task["status"], previousCompletedAt?: string | null) {
+  if (isCompletedTaskStatus(status)) {
+    return previousCompletedAt ?? new Date().toISOString()
+  }
+  return null
+}
 
 export async function GET() {
   try {
@@ -46,6 +54,8 @@ export async function POST(request: NextRequest) {
             id: task.id || crypto.randomUUID(),
             createdAt: task.createdAt ?? now,
             updatedAt: task.updatedAt ?? now,
+            status: normalizeTaskStatus(task.status),
+            completedAt: getCompletedAtForStatus(normalizeTaskStatus(task.status), task.completedAt ?? null),
           }))
 
           tx.insert(tasks).values(
@@ -61,6 +71,7 @@ export async function POST(request: NextRequest) {
                 jiraUrl: task.jiraUrl ?? null,
                 createdAt: task.createdAt,
                 updatedAt: task.updatedAt,
+                completedAt: task.completedAt ?? null,
               }
             })
           ).run()
@@ -125,6 +136,7 @@ export async function POST(request: NextRequest) {
 
     const now = new Date().toISOString()
     const taskId = id || crypto.randomUUID()
+    const normalizedStatus = normalizeTaskStatus(status)
     const existingServices = (await db.select().from(services)).map((service) => ({
       id: service.id,
       name: service.name,
@@ -141,6 +153,7 @@ export async function POST(request: NextRequest) {
       jiraUrl: jiraUrl ?? null,
       createdAt: createdAt ?? now,
       updatedAt: updatedAt ?? now,
+      completedAt: getCompletedAtForStatus(normalizedStatus, null),
     })
 
     if (incomingBranches.length > 0) {

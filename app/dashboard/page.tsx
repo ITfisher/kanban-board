@@ -4,6 +4,7 @@ import type React from "react"
 import { useMemo, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { TASK_STATUS_LABELS } from "@/lib/task-status"
 import { getTaskServiceNames } from "@/lib/task-utils"
 import type { Task } from "@/lib/types"
 import {
@@ -67,9 +68,9 @@ export default function Dashboard() {
     }, {} as Record<string, number>)
 
     const completionRate = tasks.length > 0 ?
-      Math.round((statusCounts.done || 0) / tasks.length * 100) : 0
+      Math.round(((statusCounts.done || 0) + (statusCounts.closed || 0)) / tasks.length * 100) : 0
 
-    const activeTasksCount = (statusCounts["in-progress"] || 0) + (statusCounts["review"] || 0)
+    const activeTasksCount = (statusCounts["in-progress"] || 0) + (statusCounts.testing || 0)
 
     return {
       total: tasks.length,
@@ -87,7 +88,8 @@ export default function Dashboard() {
     switch (status) {
       case "done": return "text-green-600 bg-green-50"
       case "in-progress": return "text-yellow-600 bg-yellow-50"
-      case "review": return "text-purple-600 bg-purple-50"
+      case "testing": return "text-purple-600 bg-purple-50"
+      case "closed": return "text-zinc-700 bg-zinc-100"
       case "todo": return "text-blue-600 bg-blue-50"
       case "backlog": return "text-gray-600 bg-gray-50"
       default: return "text-gray-600 bg-gray-50"
@@ -144,7 +146,7 @@ export default function Dashboard() {
                   <CardContent>
                     <div className="text-2xl font-bold">{stats.completionRate}%</div>
                     <p className="text-xs text-muted-foreground">
-                      {stats.statusCounts.done || 0} 个任务已完成
+                      {(stats.statusCounts.done || 0) + (stats.statusCounts.closed || 0)} 个任务已完结
                     </p>
                   </CardContent>
                 </Card>
@@ -157,7 +159,7 @@ export default function Dashboard() {
                   <CardContent>
                     <div className="text-2xl font-bold">{stats.activeTasksCount}</div>
                     <p className="text-xs text-muted-foreground">
-                      开发中 + 待审核
+                      开发中 + 测试中
                     </p>
                   </CardContent>
                 </Card>
@@ -188,20 +190,13 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {Object.entries(stats.statusCounts).map(([status, count]) => {
-                      const statusLabels: Record<string, string> = {
-                        "backlog": "待规划",
-                        "todo": "待开发",
-                        "in-progress": "开发中",
-                        "review": "待审核",
-                        "done": "已完成"
-                      }
                       const percentage = Math.round((count / stats.total) * 100)
 
                       return (
                         <div key={status} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Badge className={getStatusColor(status)}>
-                              {statusLabels[status]}
+                              {TASK_STATUS_LABELS[status as keyof typeof TASK_STATUS_LABELS] || status}
                             </Badge>
                             <span className="text-sm">{count} 个任务</span>
                           </div>

@@ -1,6 +1,6 @@
 import type { BackupData, Service, ServiceBranch, SettingsData, Task, TaskPriority, TaskStatus } from "@/lib/types"
 
-const TASK_STATUSES: TaskStatus[] = ["backlog", "todo", "in-progress", "review", "done"]
+const TASK_STATUSES: TaskStatus[] = ["backlog", "todo", "in-progress", "testing", "done", "closed"]
 const TASK_PRIORITIES: TaskPriority[] = ["low", "medium", "high"]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -8,7 +8,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isTaskStatus(value: unknown): value is TaskStatus {
-  return typeof value === "string" && TASK_STATUSES.includes(value as TaskStatus)
+  return typeof value === "string" && (TASK_STATUSES.includes(value as TaskStatus) || value === "review")
 }
 
 function isTaskPriority(value: unknown): value is TaskPriority {

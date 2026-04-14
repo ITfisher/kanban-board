@@ -13,6 +13,7 @@ import { buildTaskBranchName } from "@/lib/branch-name"
 import { DEFAULT_SETTINGS } from "@/lib/default-settings"
 import { buildSmartCheckoutCommand } from "@/lib/git-commands"
 import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
+import { TASK_STATUS_LABELS } from "@/lib/task-status"
 import type { BranchStatus, Service, ServiceBranch, SettingsData, Task } from "@/lib/types"
 import MDEditor from "@uiw/react-md-editor"
 import "@uiw/react-md-editor/markdown-editor.css"
@@ -687,22 +688,18 @@ export default function TaskDetailPage() {
         return "bg-blue-100 text-blue-800"
       case "in-progress":
         return "bg-yellow-100 text-yellow-800"
-      case "review":
+      case "testing":
         return "bg-purple-100 text-purple-800"
       case "done":
         return "bg-green-100 text-green-800"
+      case "closed":
+        return "bg-zinc-200 text-zinc-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
   }
 
-  const statusLabels = {
-    backlog: "待规划",
-    todo: "待开发",
-    "in-progress": "开发中",
-    review: "待审核",
-    done: "已完成",
-  }
+  const statusLabels = TASK_STATUS_LABELS
 
   const priorityLabels = {
     high: "高优先级",
@@ -852,6 +849,13 @@ export default function TaskDetailPage() {
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">更新时间:</span>
                       <span className="font-medium">{new Date(task.updatedAt).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {task.completedAt && (
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">完成时间:</span>
+                      <span className="font-medium">{new Date(task.completedAt).toLocaleDateString()}</span>
                     </div>
                   )}
                 </div>

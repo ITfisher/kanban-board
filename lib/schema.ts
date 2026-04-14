@@ -11,6 +11,7 @@ export const tasks = sqliteTable("tasks", {
   jiraUrl: text("jira_url"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
+  completedAt: text("completed_at"),
 })
 
 export const serviceBranches = sqliteTable("service_branches", {

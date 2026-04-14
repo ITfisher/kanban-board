@@ -1,4 +1,5 @@
 import { serviceBranches, tasks } from "@/lib/schema"
+import { normalizeTaskStatus } from "@/lib/task-status"
 import type { ServiceBranch, Task } from "@/lib/types"
 
 type TaskRow = typeof tasks.$inferSelect
@@ -9,7 +10,7 @@ export function toClientTask(task: TaskRow, branches: ServiceBranchRow[]): Task 
     id: task.id,
     title: task.title,
     description: task.description,
-    status: task.status as Task["status"],
+    status: normalizeTaskStatus(task.status),
     priority: task.priority as Task["priority"],
     assignee: task.assigneeName
       ? { name: task.assigneeName, avatar: task.assigneeAvatar ?? undefined }
@@ -17,6 +18,7 @@ export function toClientTask(task: TaskRow, branches: ServiceBranchRow[]): Task 
     jiraUrl: task.jiraUrl ?? undefined,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
+    completedAt: task.completedAt ?? undefined,
     serviceBranches: branches.map(toClientServiceBranch),
   }
 }

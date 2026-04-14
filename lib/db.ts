@@ -3,6 +3,7 @@ import fs from "fs"
 import { drizzle } from "drizzle-orm/better-sqlite3"
 import path from "path"
 import * as schema from "./schema"
+import { isCompletedTaskStatus } from "./task-status"
 
 const DB_PATH = path.join(process.cwd(), "data", "kanban.db")
 
@@ -34,7 +35,8 @@ function initSchema(sqlite: Database.Database) {
       assignee_avatar TEXT,
       jira_url TEXT,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      completed_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS service_branches (
@@ -89,9 +91,14 @@ function initSchema(sqlite: Database.Database) {
   `)
 
   const serviceBranchColumns = sqlite.prepare(`PRAGMA table_info(service_branches)`).all() as Array<{ name: string }>
+  const taskColumns = sqlite.prepare(`PRAGMA table_info(tasks)`).all() as Array<{ name: string }>
+  const hasCompletedAtColumn = taskColumns.some((column) => column.name === "completed_at")
   const hasServiceIdColumn = serviceBranchColumns.some((column) => column.name === "service_id")
   const hasTestPullRequestUrlColumn = serviceBranchColumns.some((column) => column.name === "test_pull_request_url")
   const hasMasterPullRequestUrlColumn = serviceBranchColumns.some((column) => column.name === "master_pull_request_url")
+  if (!hasCompletedAtColumn) {
+    sqlite.exec(`ALTER TABLE tasks ADD COLUMN completed_at TEXT`)
+  }
   if (!hasServiceIdColumn) {
     sqlite.exec(`ALTER TABLE service_branches ADD COLUMN service_id TEXT`)
   }
@@ -171,6 +178,29 @@ function initSchema(sqlite: Database.Database) {
       COMMIT;
     `)
   }
+
+  sqlite.exec(`
+    UPDATE tasks
+    SET status = 'testing'
+    WHERE status = 'review'
+  `)
+
+  const completedTaskRows = sqlite
+    .prepare(`SELECT id, status, created_at, updated_at, completed_at FROM tasks`)
+    .all() as Array<{ id: string; status: string; created_at: string; updated_at: string; completed_at: string | null }>
+
+  const updateCompletedAt = sqlite.prepare(`UPDATE tasks SET completed_at = ? WHERE id = ?`)
+
+  completedTaskRows.forEach((task) => {
+    if (isCompletedTaskStatus(task.status)) {
+      updateCompletedAt.run(task.completed_at ?? task.updated_at ?? task.created_at, task.id)
+      return
+    }
+
+    if (task.completed_at !== null) {
+      updateCompletedAt.run(null, task.id)
+    }
+  })
 
   sqlite.exec(`
     UPDATE service_branches

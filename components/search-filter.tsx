@@ -15,6 +15,14 @@ interface SearchFilterProps {
   selectedAssignee: string
   onAssigneeChange: (assignee: string) => void
   assignees: string[]
+  createdDateStart: string
+  createdDateEnd: string
+  completedDateStart: string
+  completedDateEnd: string
+  onCreatedDateStartChange: (value: string) => void
+  onCreatedDateEndChange: (value: string) => void
+  onCompletedDateStartChange: (value: string) => void
+  onCompletedDateEndChange: (value: string) => void
   onClearFilters: () => void
   hasActiveFilters: boolean
 }
@@ -27,6 +35,14 @@ export function SearchFilter({
   selectedAssignee,
   onAssigneeChange,
   assignees,
+  createdDateStart,
+  createdDateEnd,
+  completedDateStart,
+  completedDateEnd,
+  onCreatedDateStartChange,
+  onCreatedDateEndChange,
+  onCompletedDateStartChange,
+  onCompletedDateEndChange,
   onClearFilters,
   hasActiveFilters,
 }: SearchFilterProps) {
@@ -62,8 +78,8 @@ export function SearchFilter({
       </div>
 
       {isExpanded && (
-        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-          <div className="flex items-center gap-2">
+        <div className="grid gap-3 rounded-lg bg-muted/50 p-3 lg:grid-cols-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">优先级:</span>
             <Select value={selectedPriority} onValueChange={onPriorityChange}>
               <SelectTrigger className="w-24 h-8">
@@ -78,7 +94,7 @@ export function SearchFilter({
             </Select>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">负责人:</span>
             <Select value={selectedAssignee} onValueChange={onAssigneeChange}>
               <SelectTrigger className="w-32 h-8">
@@ -95,8 +111,22 @@ export function SearchFilter({
             </Select>
           </div>
 
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">创建时间:</span>
+            <Input type="date" value={createdDateStart} onChange={(e) => onCreatedDateStartChange(e.target.value)} className="h-8 w-[152px]" />
+            <span className="text-xs text-muted-foreground">至</span>
+            <Input type="date" value={createdDateEnd} onChange={(e) => onCreatedDateEndChange(e.target.value)} className="h-8 w-[152px]" />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">完成时间:</span>
+            <Input type="date" value={completedDateStart} onChange={(e) => onCompletedDateStartChange(e.target.value)} className="h-8 w-[152px]" />
+            <span className="text-xs text-muted-foreground">至</span>
+            <Input type="date" value={completedDateEnd} onChange={(e) => onCompletedDateEndChange(e.target.value)} className="h-8 w-[152px]" />
+          </div>
+
           {hasActiveFilters && (
-            <div className="flex items-center gap-1 ml-2">
+            <div className="flex flex-wrap items-center gap-1 lg:col-span-2">
               {selectedPriority !== "all" && (
                 <Badge variant="secondary" className="text-xs">
                   优先级: {selectedPriority}
@@ -105,6 +135,26 @@ export function SearchFilter({
               {selectedAssignee !== "all" && (
                 <Badge variant="secondary" className="text-xs">
                   负责人: {selectedAssignee}
+                </Badge>
+              )}
+              {createdDateStart && (
+                <Badge variant="secondary" className="text-xs">
+                  创建开始: {createdDateStart}
+                </Badge>
+              )}
+              {createdDateEnd && (
+                <Badge variant="secondary" className="text-xs">
+                  创建结束: {createdDateEnd}
+                </Badge>
+              )}
+              {completedDateStart && (
+                <Badge variant="secondary" className="text-xs">
+                  完成开始: {completedDateStart}
+                </Badge>
+              )}
+              {completedDateEnd && (
+                <Badge variant="secondary" className="text-xs">
+                  完成结束: {completedDateEnd}
                 </Badge>
               )}
             </div>

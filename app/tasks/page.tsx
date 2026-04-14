@@ -2,24 +2,54 @@
 
 import type React from "react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { toast } from "@/hooks/use-toast"
-import { Trash2, CheckSquare } from "lucide-react"
-import { TaskCard } from "@/components/task-card"
+import { Button } from "@/components/ui/button"
+import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { CreateTaskDialog } from "@/components/create-task-dialog"
 import { SearchFilter } from "@/components/search-filter"
-import { ConfirmationDialog } from "@/components/confirmation-dialog"
+import { TaskCard } from "@/components/task-card"
+import { toast } from "@/hooks/use-toast"
 import { DEFAULT_SETTINGS } from "@/lib/default-settings"
-import type { SettingsData, Task } from "@/lib/types"
+import { isCompletedTaskStatus, TASK_STATUS_COLUMNS, TASK_STATUS_LABELS } from "@/lib/task-status"
+import type { SettingsData, Task, TaskStatus } from "@/lib/types"
+import { CheckSquare, Eye, EyeOff, Trash2 } from "lucide-react"
 
-const statusColumns = [
-  { id: "backlog", title: "待规划", color: "bg-gray-100" },
-  { id: "todo", title: "待开发", color: "bg-blue-50" },
-  { id: "in-progress", title: "开发中", color: "bg-yellow-50" },
-  { id: "review", title: "待审核", color: "bg-purple-50" },
-  { id: "done", title: "已完成", color: "bg-green-50" },
-]
+const COLUMN_VISIBILITY_STORAGE_KEY = "kanban-board:task-column-visibility"
+
+function getDateRangeBoundary(value: string, boundary: "start" | "end") {
+  if (!value) return null
+  const suffix = boundary === "start" ? "T00:00:00.000" : "T23:59:59.999"
+  const date = new Date(`${value}${suffix}`)
+  return Number.isNaN(date.getTime()) ? null : date.getTime()
+}
+
+function matchesDateRange(value: string | undefined, start: string, end: string) {
+  if (!start && !end) return true
+  if (!value) return false
+
+  const target = new Date(value).getTime()
+  if (Number.isNaN(target)) return false
+
+  const startBoundary = getDateRangeBoundary(start, "start")
+  const endBoundary = getDateRangeBoundary(end, "end")
+
+  if (startBoundary !== null && target < startBoundary) {
+    return false
+  }
+
+  if (endBoundary !== null && target > endBoundary) {
+    return false
+  }
+
+  return true
+}
+
+function getCompletedAtForStatus(status: TaskStatus, previousCompletedAt?: string) {
+  if (isCompletedTaskStatus(status)) {
+    return previousCompletedAt ?? new Date().toISOString()
+  }
+  return undefined
+}
 
 export default function KanbanBoard() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -28,9 +58,21 @@ export default function KanbanBoard() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedPriority, setSelectedPriority] = useState("all")
   const [selectedAssignee, setSelectedAssignee] = useState("all")
+  const [createdDateStart, setCreatedDateStart] = useState("")
+  const [createdDateEnd, setCreatedDateEnd] = useState("")
+  const [completedDateStart, setCompletedDateStart] = useState("")
+  const [completedDateEnd, setCompletedDateEnd] = useState("")
   const [selectedTasks, setSelectedTasks] = useState<string[]>([])
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
+  const [columnVisibility, setColumnVisibility] = useState<Record<TaskStatus, boolean>>({
+    backlog: true,
+    todo: true,
+    "in-progress": true,
+    testing: true,
+    done: true,
+    closed: true,
+  })
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
     title: string
@@ -43,6 +85,25 @@ export default function KanbanBoard() {
     description: "",
     onConfirm: () => {},
   })
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(COLUMN_VISIBILITY_STORAGE_KEY)
+      if (!raw) return
+
+      const parsed = JSON.parse(raw) as Partial<Record<TaskStatus, boolean>>
+      setColumnVisibility((prev) => ({
+        ...prev,
+        ...parsed,
+      }))
+    } catch {
+      // Ignore malformed localStorage values.
+    }
+  }, [])
+
+  useEffect(() => {
+    window.localStorage.setItem(COLUMN_VISIBILITY_STORAGE_KEY, JSON.stringify(columnVisibility))
+  }, [columnVisibility])
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -59,10 +120,7 @@ export default function KanbanBoard() {
     const loadData = async () => {
       setLoading(true)
       try {
-        const [tasksRes, settingsRes] = await Promise.all([
-          fetch("/api/tasks"),
-          fetch("/api/settings"),
-        ])
+        const [tasksRes, settingsRes] = await Promise.all([fetch("/api/tasks"), fetch("/api/settings")])
         if (tasksRes.ok) {
           setTasks(await tasksRes.json())
         }
@@ -76,24 +134,23 @@ export default function KanbanBoard() {
         setLoading(false)
       }
     }
-    loadData()
+
+    void loadData()
   }, [])
 
   const assignees = useMemo(() => {
-    if (!tasks) return []
     return [...new Set(tasks.map((task) => task.assignee?.name).filter(Boolean))] as string[]
   }, [tasks])
 
   const filteredTasks = useMemo(() => {
-    if (!tasks) return []
-
     let filtered = tasks
 
     if (searchTerm) {
+      const normalized = searchTerm.toLowerCase()
       filtered = filtered.filter(
         (task) =>
-          task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          task.description.toLowerCase().includes(searchTerm.toLowerCase()),
+          task.title.toLowerCase().includes(normalized) ||
+          task.description.toLowerCase().includes(normalized),
       )
     }
 
@@ -105,19 +162,48 @@ export default function KanbanBoard() {
       filtered = filtered.filter((task) => task.assignee?.name === selectedAssignee)
     }
 
+    filtered = filtered.filter((task) => matchesDateRange(task.createdAt, createdDateStart, createdDateEnd))
+    filtered = filtered.filter((task) => matchesDateRange(task.completedAt, completedDateStart, completedDateEnd))
+
     return filtered
-  }, [tasks, searchTerm, selectedPriority, selectedAssignee])
+  }, [
+    tasks,
+    searchTerm,
+    selectedPriority,
+    selectedAssignee,
+    createdDateStart,
+    createdDateEnd,
+    completedDateStart,
+    completedDateEnd,
+  ])
 
-  const getTasksByStatus = (status: string) => {
-    return filteredTasks.filter((task) => task.status === status)
-  }
+  const visibleColumns = useMemo(
+    () => TASK_STATUS_COLUMNS.filter((column) => columnVisibility[column.id]),
+    [columnVisibility],
+  )
 
-  const hasActiveFilters = searchTerm !== "" || selectedPriority !== "all" || selectedAssignee !== "all"
+  const getTasksByStatus = useCallback(
+    (status: TaskStatus) => filteredTasks.filter((task) => task.status === status),
+    [filteredTasks],
+  )
+
+  const hasActiveFilters =
+    searchTerm !== "" ||
+    selectedPriority !== "all" ||
+    selectedAssignee !== "all" ||
+    createdDateStart !== "" ||
+    createdDateEnd !== "" ||
+    completedDateStart !== "" ||
+    completedDateEnd !== ""
 
   const clearFilters = () => {
     setSearchTerm("")
     setSelectedPriority("all")
     setSelectedAssignee("all")
+    setCreatedDateStart("")
+    setCreatedDateEnd("")
+    setCompletedDateStart("")
+    setCompletedDateEnd("")
   }
 
   const handleCreateTask = async (newTaskData: Omit<Task, "id">) => {
@@ -148,7 +234,7 @@ export default function KanbanBoard() {
       })
       if (!res.ok) throw new Error("Failed to update task")
       const saved = await res.json()
-      setTasks((prev) => prev.map((t) => (t.id === saved.id ? saved : t)))
+      setTasks((prev) => prev.map((task) => (task.id === saved.id ? saved : task)))
       toast({
         title: "任务更新成功",
         description: `任务 "${saved.title}" 已更新`,
@@ -169,14 +255,8 @@ export default function KanbanBoard() {
       onConfirm: async () => {
         const count = selectedTasks.length
         try {
-          const results = await Promise.all(
-            selectedTasks.map((id) =>
-              fetch(`/api/tasks/${id}`, { method: "DELETE" })
-            )
-          )
-
-          const hasFailure = results.some((response) => !response.ok)
-          if (hasFailure) {
+          const results = await Promise.all(selectedTasks.map((id) => fetch(`/api/tasks/${id}`, { method: "DELETE" })))
+          if (results.some((response) => !response.ok)) {
             throw new Error("部分任务删除失败")
           }
 
@@ -211,7 +291,7 @@ export default function KanbanBoard() {
     }
   }
 
-  const handleDrop = async (e: React.DragEvent, newStatus: string) => {
+  const handleDrop = async (e: React.DragEvent, newStatus: TaskStatus) => {
     e.preventDefault()
     const taskId = e.dataTransfer.getData("text/plain")
 
@@ -219,34 +299,36 @@ export default function KanbanBoard() {
       return
     }
 
-    if (draggedTaskId) {
-      const task = tasks.find((t) => t.id === draggedTaskId)
-      // Optimistic update
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === draggedTaskId ? { ...t, status: newStatus as Task["status"] } : t
-        )
-      )
+    const task = tasks.find((item) => item.id === draggedTaskId)
+    if (!task) {
+      setDraggedTaskId(null)
+      setDragOverColumn(null)
+      return
+    }
 
-      try {
-        const res = await fetch(`/api/tasks/${draggedTaskId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        })
-        if (!res.ok) throw new Error("Failed to update status")
+    setTasks((prev) =>
+      prev.map((item) =>
+        item.id === draggedTaskId
+          ? { ...item, status: newStatus, completedAt: getCompletedAtForStatus(newStatus, item.completedAt) }
+          : item,
+      ),
+    )
 
-        if (task) {
-          toast({
-            title: "任务状态更新",
-            description: `任务 "${task.title}" 已移动到 "${statusColumns.find((col) => col.id === newStatus)?.title}"`,
-          })
-        }
-      } catch {
-        // Revert optimistic update on failure
-        await fetchTasks()
-        toast({ title: "状态更新失败", description: "无法更新任务状态，请重试", variant: "destructive" })
-      }
+    try {
+      const res = await fetch(`/api/tasks/${draggedTaskId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (!res.ok) throw new Error("Failed to update status")
+
+      toast({
+        title: "任务状态更新",
+        description: `任务 "${task.title}" 已移动到 "${TASK_STATUS_LABELS[newStatus]}"`,
+      })
+    } catch {
+      await fetchTasks()
+      toast({ title: "状态更新失败", description: "无法更新任务状态，请重试", variant: "destructive" })
     }
 
     setDraggedTaskId(null)
@@ -256,6 +338,13 @@ export default function KanbanBoard() {
   const handleDragEnd = () => {
     setDraggedTaskId(null)
     setDragOverColumn(null)
+  }
+
+  const toggleColumnVisibility = (status: TaskStatus) => {
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [status]: !prev[status],
+    }))
   }
 
   useEffect(() => {
@@ -280,6 +369,7 @@ export default function KanbanBoard() {
             break
         }
       }
+
       if (e.key === "Escape") {
         setSelectedTasks([])
         clearFilters()
@@ -295,155 +385,188 @@ export default function KanbanBoard() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
-        {/* Header */}
-        <header className="border-b bg-card flex-shrink-0">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-foreground">任务管理</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              {selectedTasks.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{selectedTasks.length} 已选择</Badge>
-                  <Button variant="outline" size="sm" onClick={handleBatchDelete}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    批量删除
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedTasks([])}>
-                    取消选择
-                  </Button>
-                </div>
-              )}
-              <CreateTaskDialog
-                onCreateTask={handleCreateTask}
-                defaultPriority={settings.defaultPriority}
-              />
-            </div>
+    <div className="flex h-full flex-col bg-background">
+      <header className="flex-shrink-0 border-b bg-card">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold text-foreground">任务管理</h1>
           </div>
-
-          <div className="px-6 pb-4">
-            <SearchFilter
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              selectedPriority={selectedPriority}
-              onPriorityChange={setSelectedPriority}
-              selectedAssignee={selectedAssignee}
-              onAssigneeChange={setSelectedAssignee}
-              assignees={assignees}
-              onClearFilters={clearFilters}
-              hasActiveFilters={hasActiveFilters}
-            />
-          </div>
-        </header>
-
-        {/* Kanban Board */}
-        <div className="flex-1 p-6 overflow-auto">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                <svg className="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                <span className="text-sm">加载任务中...</span>
+          <div className="flex items-center gap-2">
+            {selectedTasks.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{selectedTasks.length} 已选择</Badge>
+                <Button variant="outline" size="sm" onClick={handleBatchDelete}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  批量删除
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedTasks([])}>
+                  取消选择
+                </Button>
               </div>
-            </div>
-          ) : tasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="max-w-md">
-                <div className="mb-4">
-                  <svg className="mx-auto h-16 w-16 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">暂无任务</h3>
-                <p className="text-muted-foreground mb-6">
-                  开始创建您的第一个任务来管理项目。您可以创建任务、设置优先级、分配负责人等。
-                </p>
-                <CreateTaskDialog
-                  onCreateTask={handleCreateTask}
-                  defaultPriority={settings.defaultPriority}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-5 gap-6 min-h-full">
-            {statusColumns.map((column) => (
-              <div key={column.id} className="flex flex-col">
-                <div className={`${column.color} rounded-lg p-3 mb-4`}>
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-sm text-foreground">{column.title}</h3>
-                    <Badge variant="secondary" className="text-xs">
-                      {getTasksByStatus(column.id).length}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div
-                  className={`flex-1 space-y-3 min-h-[200px] rounded-lg p-2 transition-all duration-200 ${
-                    dragOverColumn === column.id
-                      ? "bg-primary/10 border-2 border-dashed border-primary"
-                      : "border-2 border-transparent"
-                  }`}
-                  onDragOver={(e) => handleDragOver(e, column.id)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, column.id)}
-                >
-                  {getTasksByStatus(column.id).map((task) => (
-                    <div key={task.id} className="relative group">
-                      <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => toggleTaskSelection(task.id)}
-                          className={`h-6 w-6 p-0 ${
-                            selectedTasks.includes(task.id) ? "bg-primary text-primary-foreground" : ""
-                          }`}
-                        >
-                          <CheckSquare className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div
-                        onDragStart={(e) => handleDragStart(e, task.id)}
-                        onDragEnd={handleDragEnd}
-                        className={selectedTasks.includes(task.id) ? "ring-2 ring-primary" : ""}
-                      >
-                        <TaskCard
-                          task={task}
-                          onUpdate={handleUpdateTask}
-                          isDragging={draggedTaskId === task.id}
-                          compactView={settings.compactView}
-                          showAssigneeAvatars={settings.showAssigneeAvatars}
-                        />
-                      </div>
-                    </div>
-                  ))}
-
-                </div>
-              </div>
-            ))}
-            </div>
-          )}
-
-          <div className="fixed bottom-4 right-4 text-xs text-muted-foreground bg-card border rounded-lg p-2 shadow-sm">
-            <div className="space-y-1">
-              <div>Ctrl+K: 搜索</div>
-              <div>Ctrl+Shift+A: 全选</div>
-              <div>Ctrl+Shift+D: 批量删除</div>
-              <div>Esc: 清除选择/筛选</div>
-            </div>
+            )}
+            <CreateTaskDialog onCreateTask={handleCreateTask} defaultPriority={settings.defaultPriority} />
           </div>
         </div>
 
-        <ConfirmationDialog
-          open={confirmDialog.open}
-          onOpenChange={(open) => setConfirmDialog((prev) => ({ ...prev, open }))}
-          title={confirmDialog.title}
-          description={confirmDialog.description}
-          onConfirm={confirmDialog.onConfirm}
-          variant={confirmDialog.variant}
-        />
+        <div className="space-y-4 px-6 pb-4">
+          <SearchFilter
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            selectedPriority={selectedPriority}
+            onPriorityChange={setSelectedPriority}
+            selectedAssignee={selectedAssignee}
+            onAssigneeChange={setSelectedAssignee}
+            assignees={assignees}
+            createdDateStart={createdDateStart}
+            createdDateEnd={createdDateEnd}
+            completedDateStart={completedDateStart}
+            completedDateEnd={completedDateEnd}
+            onCreatedDateStartChange={setCreatedDateStart}
+            onCreatedDateEndChange={setCreatedDateEnd}
+            onCompletedDateStartChange={setCompletedDateStart}
+            onCompletedDateEndChange={setCompletedDateEnd}
+            onClearFilters={clearFilters}
+            hasActiveFilters={hasActiveFilters}
+          />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">栏目显示:</span>
+            {TASK_STATUS_COLUMNS.map((column) => {
+              const visible = columnVisibility[column.id]
+              return (
+                <Button
+                  key={column.id}
+                  variant={visible ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => toggleColumnVisibility(column.id)}
+                  className="h-8"
+                >
+                  {visible ? <Eye className="mr-2 h-3.5 w-3.5" /> : <EyeOff className="mr-2 h-3.5 w-3.5" />}
+                  {column.title}
+                </Button>
+              )
+            })}
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-auto p-6">
+        {loading ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="flex flex-col items-center gap-3 text-muted-foreground">
+              <svg className="h-8 w-8 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <span className="text-sm">加载任务中...</span>
+            </div>
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <div className="max-w-md">
+              <div className="mb-4">
+                <svg className="mx-auto h-16 w-16 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+              </div>
+              <h3 className="mb-2 text-lg font-medium text-foreground">暂无任务</h3>
+              <p className="mb-6 text-muted-foreground">开始创建您的第一个任务来管理项目。您可以创建任务、设置优先级、分配负责人等。</p>
+              <CreateTaskDialog onCreateTask={handleCreateTask} defaultPriority={settings.defaultPriority} />
+            </div>
+          </div>
+        ) : filteredTasks.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <div className="max-w-md">
+              <h3 className="mb-2 text-lg font-medium text-foreground">没有符合条件的任务</h3>
+              <p className="mb-6 text-muted-foreground">当前筛选条件下没有匹配结果，可以尝试放宽时间、负责人或优先级条件。</p>
+              <Button variant="outline" onClick={clearFilters}>
+                清除筛选
+              </Button>
+            </div>
+          </div>
+        ) : visibleColumns.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <div className="max-w-md">
+              <h3 className="mb-2 text-lg font-medium text-foreground">当前没有显示中的栏目</h3>
+              <p className="text-muted-foreground">请在上方“栏目显示”里打开至少一个状态栏目。</p>
+            </div>
+          </div>
+        ) : (
+          <div className="h-full overflow-x-auto overflow-y-hidden pb-4">
+            <div className="flex min-h-full min-w-max gap-6">
+              {visibleColumns.map((column) => (
+                <div key={column.id} className="flex w-[320px] shrink-0 flex-col">
+                  <div className={`${column.color} mb-4 rounded-lg p-3`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="truncate font-semibold text-sm text-foreground">{column.title}</h3>
+                      <Badge variant="secondary" className="text-xs">
+                        {getTasksByStatus(column.id).length}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`flex-1 space-y-3 rounded-lg p-2 transition-all duration-200 ${
+                      dragOverColumn === column.id
+                        ? "border-2 border-dashed border-primary bg-primary/10"
+                        : "border-2 border-transparent"
+                    }`}
+                    onDragOver={(e) => handleDragOver(e, column.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, column.id)}
+                  >
+                    {getTasksByStatus(column.id).map((task) => (
+                      <div key={task.id} className="group relative">
+                        <div className="absolute left-2 top-2 z-10 opacity-0 transition-opacity group-hover:opacity-100">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => toggleTaskSelection(task.id)}
+                            className={`h-6 w-6 p-0 ${selectedTasks.includes(task.id) ? "bg-primary text-primary-foreground" : ""}`}
+                          >
+                            <CheckSquare className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div
+                          onDragStart={(e) => handleDragStart(e, task.id)}
+                          onDragEnd={handleDragEnd}
+                          className={selectedTasks.includes(task.id) ? "rounded-xl ring-2 ring-primary" : ""}
+                        >
+                          <TaskCard
+                            task={task}
+                            onUpdate={handleUpdateTask}
+                            isDragging={draggedTaskId === task.id}
+                            compactView={settings.compactView}
+                            showAssigneeAvatars={settings.showAssigneeAvatars}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="fixed bottom-4 right-4 rounded-lg border bg-card p-2 text-xs text-muted-foreground shadow-sm">
+          <div className="space-y-1">
+            <div>Ctrl+K: 搜索</div>
+            <div>Ctrl+Shift+A: 全选</div>
+            <div>Ctrl+Shift+D: 批量删除</div>
+            <div>Esc: 清除选择/筛选</div>
+          </div>
+        </div>
       </div>
+
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog((prev) => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        onConfirm={confirmDialog.onConfirm}
+        variant={confirmDialog.variant}
+      />
+    </div>
   )
 }
