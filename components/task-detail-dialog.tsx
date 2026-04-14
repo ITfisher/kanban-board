@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { GitBranch, Calendar, User, Tag, ExternalLink, Plus } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { GitBranch, Calendar, User, Tag, ExternalLink, Plus, Save } from "lucide-react"
 import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
 import { useAppSettings } from "@/hooks/use-app-settings"
@@ -28,6 +29,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
   const { settings } = useAppSettings()
   const [services, setServices] = useState<Service[]>([])
   const [showCreateBranch, setShowCreateBranch] = useState(false)
+  const [editedTask, setEditedTask] = useState<Task | null>(task)
+
+  useEffect(() => {
+    setEditedTask(task)
+  }, [task, open])
 
   useEffect(() => {
     fetch("/api/services")
@@ -45,7 +51,20 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
   }, [task, settings.branchPrefix])
 
   if (!task) return null
-  
+
+  const isDirty = editedTask && (
+    editedTask.title !== task.title ||
+    editedTask.description !== task.description ||
+    editedTask.priority !== task.priority ||
+    (editedTask.assignee?.name ?? "") !== (task.assignee?.name ?? "")
+  )
+
+  const handleSave = () => {
+    if (!editedTask || !onUpdateTask) return
+    onUpdateTask(editedTask)
+    toast({ title: "任务已保存" })
+  }
+
   const handleCreateBranch = () => {
     if (!selectedServiceId || !branchName.trim()) {
       toast({
@@ -107,19 +126,6 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
     })
   }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-100 text-red-800 border-red-200"
-      case "medium":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
-      case "low":
-        return "bg-green-100 text-green-800 border-green-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
-    }
-  }
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "backlog":
@@ -165,13 +171,28 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto hide-scrollbar [&>button]:hidden">
         <DialogHeader>
           <div className="relative">
-            <DialogTitle className="text-lg font-semibold text-balance leading-tight pr-12">{task.title}</DialogTitle>
-            <Button size="sm" variant="ghost" className="absolute top-0 right-0 h-8 w-8 p-0 hover:bg-muted" asChild>
-              <Link href={`/tasks/${task.id}`}>
-                <ExternalLink className="h-4 w-4" />
-                <span className="sr-only">查看详情页</span>
-              </Link>
-            </Button>
+            <Input
+              value={editedTask?.title ?? task.title}
+              onChange={(e) => setEditedTask(editedTask ? { ...editedTask, title: e.target.value } : null)}
+              className="pr-20 text-base font-semibold border-0 border-b rounded-none px-0 shadow-none focus-visible:ring-0"
+              placeholder="任务标题"
+            />
+            <div className="absolute top-0 right-0 flex items-center gap-1">
+              {isDirty && (
+                <Button size="sm" variant="default" className="h-7 px-2 text-xs" onClick={handleSave}>
+                  <Save className="h-3 w-3 mr-1" />
+                  保存
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 hover:bg-muted" asChild>
+                <Link href={`/tasks/${task.id}`}>
+                  <ExternalLink className="h-4 w-4" />
+                  <span className="sr-only">查看详情页</span>
+                </Link>
+              </Button>
+            </div>
+            {/* Keep DialogTitle hidden for accessibility */}
+            <DialogTitle className="sr-only">{task.title}</DialogTitle>
           </div>
         </DialogHeader>
 
@@ -191,34 +212,62 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask }: Tas
                 <Tag className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">优先级</span>
               </div>
-              <Badge className={`${getPriorityColor(task.priority)}`}>
-                {task.priority === "high" ? "高" : task.priority === "medium" ? "中" : "低"}
-              </Badge>
+              <Select
+                value={editedTask?.priority ?? task.priority}
+                onValueChange={(value: "low" | "medium" | "high") =>
+                  setEditedTask(editedTask ? { ...editedTask, priority: value } : null)
+                }
+              >
+                <SelectTrigger className="h-7 w-24 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="high">高</SelectItem>
+                  <SelectItem value="medium">中</SelectItem>
+                  <SelectItem value="low">低</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           {/* 描述 */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium">描述</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">{task.description || "暂无描述"}</p>
+            <Textarea
+              value={editedTask?.description ?? task.description ?? ""}
+              onChange={(e) => setEditedTask(editedTask ? { ...editedTask, description: e.target.value } : null)}
+              placeholder="暂无描述"
+              rows={3}
+              className="text-sm resize-none"
+            />
           </div>
 
           {/* 负责人 */}
-          {task.assignee && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">负责人</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Avatar className="h-6 w-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">负责人</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {task.assignee && (
+                <Avatar className="h-6 w-6 shrink-0">
                   <AvatarImage src={task.assignee.avatar || "/placeholder.svg"} />
                   <AvatarFallback className="text-xs">{task.assignee.name.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <span className="text-sm">{task.assignee.name}</span>
-              </div>
+              )}
+              <Input
+                value={editedTask?.assignee?.name ?? ""}
+                onChange={(e) =>
+                  setEditedTask(editedTask ? {
+                    ...editedTask,
+                    assignee: e.target.value ? { name: e.target.value } : undefined,
+                  } : null)
+                }
+                placeholder="输入负责人姓名"
+                className="h-7 text-sm"
+              />
             </div>
-          )}
+          </div>
 
           {/* JIRA链接 */}
           {task.jiraUrl && (

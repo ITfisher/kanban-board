@@ -4,7 +4,6 @@ import type React from "react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { CreateTaskDialog } from "@/components/create-task-dialog"
 import { SearchFilter } from "@/components/search-filter"
 import { TaskCard } from "@/components/task-card"
@@ -12,7 +11,7 @@ import { toast } from "@/hooks/use-toast"
 import { DEFAULT_SETTINGS } from "@/lib/default-settings"
 import { isCompletedTaskStatus, TASK_STATUS_COLUMNS, TASK_STATUS_LABELS } from "@/lib/task-status"
 import type { SettingsData, Task, TaskStatus } from "@/lib/types"
-import { CheckSquare, Eye, EyeOff, Trash2 } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 
 const COLUMN_VISIBILITY_STORAGE_KEY = "kanban-board:task-column-visibility"
 
@@ -62,7 +61,6 @@ export default function KanbanBoard() {
   const [createdDateEnd, setCreatedDateEnd] = useState("")
   const [completedDateStart, setCompletedDateStart] = useState("")
   const [completedDateEnd, setCompletedDateEnd] = useState("")
-  const [selectedTasks, setSelectedTasks] = useState<string[]>([])
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
   const [columnVisibility, setColumnVisibility] = useState<Record<TaskStatus, boolean>>({
@@ -73,19 +71,6 @@ export default function KanbanBoard() {
     done: true,
     closed: true,
   })
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean
-    title: string
-    description: string
-    onConfirm: () => void
-    variant?: "default" | "destructive"
-  }>({
-    open: false,
-    title: "",
-    description: "",
-    onConfirm: () => {},
-  })
-
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(COLUMN_VISIBILITY_STORAGE_KEY)
@@ -244,36 +229,6 @@ export default function KanbanBoard() {
     }
   }
 
-  const handleBatchDelete = useCallback(() => {
-    if (selectedTasks.length === 0) return
-
-    setConfirmDialog({
-      open: true,
-      title: "批量删除任务",
-      description: `确定要删除选中的 ${selectedTasks.length} 个任务吗？此操作无法撤销。`,
-      variant: "destructive",
-      onConfirm: async () => {
-        const count = selectedTasks.length
-        try {
-          const results = await Promise.all(selectedTasks.map((id) => fetch(`/api/tasks/${id}`, { method: "DELETE" })))
-          if (results.some((response) => !response.ok)) {
-            throw new Error("部分任务删除失败")
-          }
-
-          setTasks((prev) => prev.filter((task) => !selectedTasks.includes(task.id)))
-          setSelectedTasks([])
-          toast({
-            title: "批量删除成功",
-            description: `已删除 ${count} 个任务`,
-          })
-        } catch {
-          toast({ title: "删除任务失败", description: "部分任务删除失败，请重试", variant: "destructive" })
-        }
-        setConfirmDialog((prev) => ({ ...prev, open: false }))
-      },
-    })
-  }, [selectedTasks])
-
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDraggedTaskId(taskId)
     e.dataTransfer.effectAllowed = "move"
@@ -355,34 +310,17 @@ export default function KanbanBoard() {
             e.preventDefault()
             document.querySelector<HTMLInputElement>('input[placeholder="搜索任务..."]')?.focus()
             break
-          case "a":
-            if (e.shiftKey) {
-              e.preventDefault()
-              setSelectedTasks(filteredTasks.map((task) => task.id))
-            }
-            break
-          case "d":
-            if (e.shiftKey && selectedTasks.length > 0) {
-              e.preventDefault()
-              handleBatchDelete()
-            }
-            break
         }
       }
 
       if (e.key === "Escape") {
-        setSelectedTasks([])
         clearFilters()
       }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [filteredTasks, handleBatchDelete, selectedTasks])
-
-  const toggleTaskSelection = (taskId: string) => {
-    setSelectedTasks((prev) => (prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]))
-  }
+  }, [filteredTasks])
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -392,18 +330,6 @@ export default function KanbanBoard() {
             <h1 className="text-2xl font-bold text-foreground">任务管理</h1>
           </div>
           <div className="flex items-center gap-2">
-            {selectedTasks.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{selectedTasks.length} 已选择</Badge>
-                <Button variant="outline" size="sm" onClick={handleBatchDelete}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  批量删除
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedTasks([])}>
-                  取消选择
-                </Button>
-              </div>
-            )}
             <CreateTaskDialog onCreateTask={handleCreateTask} defaultPriority={settings.defaultPriority} />
           </div>
         </div>
@@ -450,7 +376,7 @@ export default function KanbanBoard() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-hidden p-6">
         {loading ? (
           <div className="flex h-full items-center justify-center">
             <div className="flex flex-col items-center gap-3 text-muted-foreground">
@@ -492,10 +418,10 @@ export default function KanbanBoard() {
             </div>
           </div>
         ) : (
-          <div className="h-full overflow-x-auto overflow-y-hidden pb-4">
-            <div className="flex min-h-full min-w-max gap-6">
+          <div className="h-full overflow-x-auto pb-4">
+            <div className="flex h-full min-w-max gap-6">
               {visibleColumns.map((column) => (
-                <div key={column.id} className="flex w-[320px] shrink-0 flex-col">
+                <div key={column.id} className="flex h-full w-[320px] shrink-0 flex-col">
                   <div className={`${column.color} mb-4 rounded-lg p-3`}>
                     <div className="flex items-center justify-between gap-2">
                       <h3 className="truncate font-semibold text-sm text-foreground">{column.title}</h3>
@@ -506,7 +432,7 @@ export default function KanbanBoard() {
                   </div>
 
                   <div
-                    className={`flex-1 space-y-3 rounded-lg p-2 transition-all duration-200 ${
+                    className={`min-h-0 flex-1 overflow-y-auto space-y-3 rounded-lg p-2 transition-all duration-200 ${
                       dragOverColumn === column.id
                         ? "border-2 border-dashed border-primary bg-primary/10"
                         : "border-2 border-transparent"
@@ -516,30 +442,18 @@ export default function KanbanBoard() {
                     onDrop={(e) => handleDrop(e, column.id)}
                   >
                     {getTasksByStatus(column.id).map((task) => (
-                      <div key={task.id} className="group relative">
-                        <div className="absolute left-2 top-2 z-10 opacity-0 transition-opacity group-hover:opacity-100">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => toggleTaskSelection(task.id)}
-                            className={`h-6 w-6 p-0 ${selectedTasks.includes(task.id) ? "bg-primary text-primary-foreground" : ""}`}
-                          >
-                            <CheckSquare className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <div
-                          onDragStart={(e) => handleDragStart(e, task.id)}
-                          onDragEnd={handleDragEnd}
-                          className={selectedTasks.includes(task.id) ? "rounded-xl ring-2 ring-primary" : ""}
-                        >
-                          <TaskCard
-                            task={task}
-                            onUpdate={handleUpdateTask}
-                            isDragging={draggedTaskId === task.id}
-                            compactView={settings.compactView}
-                            showAssigneeAvatars={settings.showAssigneeAvatars}
-                          />
-                        </div>
+                      <div
+                        key={task.id}
+                        onDragStart={(e) => handleDragStart(e, task.id)}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <TaskCard
+                          task={task}
+                          onUpdate={handleUpdateTask}
+                          isDragging={draggedTaskId === task.id}
+                          compactView={settings.compactView}
+                          showAssigneeAvatars={settings.showAssigneeAvatars}
+                        />
                       </div>
                     ))}
                   </div>
@@ -552,21 +466,10 @@ export default function KanbanBoard() {
         <div className="fixed bottom-4 right-4 rounded-lg border bg-card p-2 text-xs text-muted-foreground shadow-sm">
           <div className="space-y-1">
             <div>Ctrl+K: 搜索</div>
-            <div>Ctrl+Shift+A: 全选</div>
-            <div>Ctrl+Shift+D: 批量删除</div>
-            <div>Esc: 清除选择/筛选</div>
+            <div>Esc: 清除筛选</div>
           </div>
         </div>
       </div>
-
-      <ConfirmationDialog
-        open={confirmDialog.open}
-        onOpenChange={(open) => setConfirmDialog((prev) => ({ ...prev, open }))}
-        title={confirmDialog.title}
-        description={confirmDialog.description}
-        onConfirm={confirmDialog.onConfirm}
-        variant={confirmDialog.variant}
-      />
     </div>
   )
 }

@@ -830,13 +830,25 @@ export default function TaskDetailPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  {task.assignee && (
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">负责人:</span>
-                      <span className="font-medium">{task.assignee.name}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">负责人:</span>
+                    {isEditing ? (
+                      <Input
+                        value={editedTask?.assignee?.name || ""}
+                        onChange={(e) =>
+                          setEditedTask(editedTask ? {
+                            ...editedTask,
+                            assignee: e.target.value ? { name: e.target.value } : undefined,
+                          } : null)
+                        }
+                        className="h-7 text-sm w-36"
+                        placeholder="负责人姓名"
+                      />
+                    ) : (
+                      <span className="font-medium">{task.assignee?.name || "未分配"}</span>
+                    )}
+                  </div>
                   {task.createdAt && (
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />

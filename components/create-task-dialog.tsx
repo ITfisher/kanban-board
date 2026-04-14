@@ -132,6 +132,15 @@ export function CreateTaskDialog({
     e.preventDefault()
     if (!newTask.title.trim()) return
 
+    if (!newTask.assignee?.name?.trim()) {
+      toast({
+        title: "请填写负责人",
+        description: "负责人不能为空",
+        variant: "destructive",
+      })
+      return
+    }
+
     for (const draft of branchDrafts) {
       if (!draft.serviceId) {
         toast({
@@ -254,7 +263,7 @@ export function CreateTaskDialog({
             </div>
 
             <div>
-              <Label htmlFor="assignee">负责人</Label>
+              <Label htmlFor="assignee">负责人 *</Label>
               <Input
                 id="assignee"
                 value={newTask.assignee?.name || ""}

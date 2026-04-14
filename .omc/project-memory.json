@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1776070569958,
+  "lastScanned": 1776164182889,
   "projectRoot": "/Users/panda/Documents/github/kanban-board",
   "techStack": {
     "languages": [
@@ -23,11 +23,6 @@
     ],
     "frameworks": [
       {
-        "name": "@sveltejs/kit",
-        "version": "latest",
-        "category": "fullstack"
-      },
-      {
         "name": "next",
         "version": "15.2.4",
         "category": "fullstack"
@@ -41,16 +36,6 @@
         "name": "react-dom",
         "version": "19",
         "category": "frontend"
-      },
-      {
-        "name": "svelte",
-        "version": "latest",
-        "category": "frontend"
-      },
-      {
-        "name": "vue",
-        "version": "latest",
-        "category": "frontend"
       }
     ],
     "packageManager": "pnpm",
@@ -58,18 +43,20 @@
   },
   "build": {
     "buildCommand": "pnpm build",
-    "testCommand": null,
+    "testCommand": "pnpm test",
     "lintCommand": "pnpm lint",
     "devCommand": "pnpm dev",
     "scripts": {
       "build": "next build",
       "dev": "next dev",
       "lint": "next lint",
-      "start": "next start"
+      "start": "next start",
+      "test": "node --test tests/*.test.mjs",
+      "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"
     }
   },
   "conventions": {
-    "namingStyle": "camelCase/PascalCase",
+    "namingStyle": "camelCase",
     "importStyle": "ES modules",
     "testPattern": null,
     "fileOrganization": null
@@ -80,8 +67,11 @@
     "mainDirectories": [
       "app",
       "components",
+      "docs",
       "lib",
-      "public"
+      "public",
+      "scripts",
+      "tests"
     ],
     "gitBranches": {
       "defaultBranch": "main",
@@ -94,7 +84,7 @@
       "path": "app",
       "purpose": "Application code",
       "fileCount": 4,
-      "lastAccessed": 1776070569938,
+      "lastAccessed": 1776164182875,
       "keyFiles": [
         "globals.css",
         "layout.tsx",
@@ -105,23 +95,43 @@
     "components": {
       "path": "components",
       "purpose": "UI components",
-      "fileCount": 12,
-      "lastAccessed": 1776070569938,
+      "fileCount": 13,
+      "lastAccessed": 1776164182875,
       "keyFiles": [
         "add-service-dialog.tsx",
+        "app-shell.tsx",
         "branch-name-generator.tsx",
         "confirmation-dialog.tsx",
-        "create-task-dialog.tsx",
-        "git-branch-manager.tsx"
+        "create-task-dialog.tsx"
+      ]
+    },
+    "data": {
+      "path": "data",
+      "purpose": "Data files",
+      "fileCount": 3,
+      "lastAccessed": 1776164182879,
+      "keyFiles": [
+        "kanban.db",
+        "kanban.db-shm",
+        "kanban.db-wal"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 1,
+      "lastAccessed": 1776164182879,
+      "keyFiles": [
+        "architecture-and-conventions.md"
       ]
     },
     "hooks": {
       "path": "hooks",
       "purpose": null,
       "fileCount": 3,
-      "lastAccessed": 1776070569942,
+      "lastAccessed": 1776164182879,
       "keyFiles": [
-        "use-local-storage.ts",
+        "use-app-settings.ts",
         "use-mobile.ts",
         "use-toast.ts"
       ]
@@ -129,19 +139,21 @@
     "lib": {
       "path": "lib",
       "purpose": "Library code",
-      "fileCount": 3,
-      "lastAccessed": 1776070569942,
+      "fileCount": 15,
+      "lastAccessed": 1776164182879,
       "keyFiles": [
         "branch-generator.ts",
-        "github-api.ts",
-        "utils.ts"
+        "branch-name.ts",
+        "db.ts",
+        "default-settings.ts",
+        "git-commands.ts"
       ]
     },
     "public": {
       "path": "public",
       "purpose": "Public files",
       "fileCount": 5,
-      "lastAccessed": 1776070569943,
+      "lastAccessed": 1776164182879,
       "keyFiles": [
         "placeholder-logo.png",
         "placeholder-logo.svg",
@@ -150,27 +162,46 @@
         "placeholder.svg"
       ]
     },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 1,
+      "lastAccessed": 1776164182880,
+      "keyFiles": [
+        "docker-deploy.sh"
+      ]
+    },
     "styles": {
       "path": "styles",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1776070569943,
+      "lastAccessed": 1776164182880,
       "keyFiles": [
         "globals.css"
+      ]
+    },
+    "tests": {
+      "path": "tests",
+      "purpose": "Test files",
+      "fileCount": 2,
+      "lastAccessed": 1776164182880,
+      "keyFiles": [
+        "readme.test.mjs",
+        "sqlite-contract.test.mjs"
       ]
     },
     "app/api": {
       "path": "app/api",
       "purpose": "API routes",
       "fileCount": 0,
-      "lastAccessed": 1776070569944,
+      "lastAccessed": 1776164182881,
       "keyFiles": []
     },
     "app/services": {
       "path": "app/services",
       "purpose": "Business logic services",
       "fileCount": 1,
-      "lastAccessed": 1776070569944,
+      "lastAccessed": 1776164182881,
       "keyFiles": [
         "page.tsx"
       ]
@@ -178,21 +209,33 @@
   },
   "hotPaths": [
     {
+      "path": "app/tasks/page.tsx",
+      "accessCount": 28,
+      "lastAccessed": 1776165029508,
+      "type": "file"
+    },
+    {
       "path": "app/tasks/[id]/page.tsx",
-      "accessCount": 19,
-      "lastAccessed": 1776078212286,
+      "accessCount": 25,
+      "lastAccessed": 1776164524034,
+      "type": "file"
+    },
+    {
+      "path": "components/task-detail-dialog.tsx",
+      "accessCount": 16,
+      "lastAccessed": 1776165012339,
       "type": "file"
     },
     {
       "path": "components/task-card.tsx",
-      "accessCount": 8,
-      "lastAccessed": 1776078313349,
+      "accessCount": 9,
+      "lastAccessed": 1776164376567,
       "type": "file"
     },
     {
-      "path": "app/tasks/page.tsx",
+      "path": "components/create-task-dialog.tsx",
       "accessCount": 7,
-      "lastAccessed": 1776077970576,
+      "lastAccessed": 1776164538413,
       "type": "file"
     },
     {
@@ -256,12 +299,6 @@
       "type": "file"
     },
     {
-      "path": "components/task-detail-dialog.tsx",
-      "accessCount": 4,
-      "lastAccessed": 1776078281702,
-      "type": "file"
-    },
-    {
       "path": "hooks/use-local-storage.ts",
       "accessCount": 3,
       "lastAccessed": 1776077138809,
@@ -277,12 +314,6 @@
       "path": "components/add-service-dialog.tsx",
       "accessCount": 3,
       "lastAccessed": 1776077905453,
-      "type": "file"
-    },
-    {
-      "path": "components/create-task-dialog.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1776078212734,
       "type": "file"
     },
     {
