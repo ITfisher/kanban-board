@@ -196,4 +196,12 @@ function initSchema(sqlite: Database.Database) {
     .run()
 }
 
-export const db = getDb()
+type Db = ReturnType<typeof drizzle>
+
+export const db = new Proxy({} as Db, {
+  get(_target, prop, receiver) {
+    const instance = getDb()
+    const value = Reflect.get(instance as object, prop, receiver)
+    return typeof value === "function" ? value.bind(instance) : value
+  },
+})
