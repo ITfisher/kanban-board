@@ -15,7 +15,7 @@ export const tasks = sqliteTable("tasks", {
 
 export const serviceBranches = sqliteTable("service_branches", {
   id: text("id").primaryKey(),
-  taskId: text("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  taskId: text("task_id").notNull(),
   serviceId: text("service_id"),
   serviceName: text("service_name").notNull(),
   branchName: text("branch_name").notNull(),

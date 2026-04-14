@@ -113,8 +113,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     if (taskRows.length === 0) {
       return NextResponse.json({ error: "任务不存在" }, { status: 404 })
     }
-    // Branches cascade delete via FK
-    await db.delete(tasks).where(eq(tasks.id, id))
+    db.transaction((tx) => {
+      tx.delete(serviceBranches).where(eq(serviceBranches.taskId, id)).run()
+      tx.delete(tasks).where(eq(tasks.id, id)).run()
+    })
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("DELETE /api/tasks/[id] error:", error)

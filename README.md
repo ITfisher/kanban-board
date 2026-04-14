@@ -41,12 +41,55 @@ pnpm dev
 
 打开 [http://localhost:3000](http://localhost:3000)。首页会自动跳转到 `/dashboard`。
 
+## Docker 部署
+
+仓库现在提供了可直接落地的一键 Docker 部署方式：
+
+```bash
+./scripts/docker-deploy.sh
+```
+
+如果你不想通过脚本，也可以直接执行：
+
+```bash
+docker compose up -d --build
+```
+
+服务启动后访问 [http://localhost:3000](http://localhost:3000)。
+
+### Docker 文件说明
+
+| 文件 | 作用 |
+| --- | --- |
+| `Dockerfile` | 多阶段构建 Next.js 生产镜像，输出 standalone 运行时 |
+| `docker-compose.yml` | 一条命令构建并启动容器，同时挂载 SQLite 持久化卷 |
+| `scripts/docker-deploy.sh` | 一键执行 `docker compose up -d --build` |
+
+### SQLite 初始化行为
+
+- 数据库文件位于 `data/kanban.db`
+- 首次启动时自动创建 `data/` 目录、`kanban.db` 文件和全部表结构
+- `settings` 单例行也会在初始化时自动补齐
+- 不需要手动先执行 SQL 初始化脚本
+
+### SQLite 表设计约束
+
+- 当前表结构按“弱耦合”设计，`service_branches` 只保存 `taskId` / `serviceId` 这样的逻辑关联字段
+- 数据库层不使用外键约束，避免表之间产生硬耦合
+- 任务删除、导入覆盖等需要联动清理的行为，由 `app/api/*` 在应用层显式处理
+
+### 数据持久化
+
+- `docker-compose.yml` 默认把 `/app/data` 挂载到命名卷 `kanban_data`
+- 重建容器不会丢失 SQLite 数据；如需清空数据，删除对应 volume 即可
+- 如需改端口，可在启动前设置环境变量：`PORT=3001 ./scripts/docker-deploy.sh`
+
 ## ✅ 推荐验证命令
 
 ```bash
 pnpm lint
 pnpm typecheck
-node --test tests/readme.test.mjs
+pnpm test
 pnpm build
 ```
 
@@ -124,7 +167,7 @@ graph TD
 | 表 | 说明 |
 | --- | --- |
 | `tasks` | 任务主表，保存标题、描述、状态、优先级、负责人、JIRA、时间戳 |
-| `service_branches` | 任务下的服务分支，保存 `serviceId`、分支名、PR 状态、分支差异与合并状态 |
+| `service_branches` | 任务下的服务分支，保存 `taskId`、`serviceId`、分支名、PR 状态、分支差异与合并状态；仅保留逻辑关联，不使用外键约束 |
 | `services` | 服务登记信息，保存仓库地址、测试分支、主分支、依赖 |
 | `settings` | 应用设置单例 |
 | `github_configs` | GitHub / GitHub Enterprise 配置，含 token，仅服务端读取 |

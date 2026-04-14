@@ -1,0 +1,17 @@
+services:
+  kanban-board:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kanban-board
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - kanban_data:/app/data
+
+volumes:
+  kanban_data:
