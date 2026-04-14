@@ -15,7 +15,9 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# BuildKit 缓存挂载：pnpm store 跨构建复用，依赖未变时秒级完成
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
 FROM base AS builder
 

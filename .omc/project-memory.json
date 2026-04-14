@@ -335,6 +335,24 @@
       "type": "file"
     },
     {
+      "path": "Dockerfile",
+      "accessCount": 2,
+      "lastAccessed": 1776165627558,
+      "type": "file"
+    },
+    {
+      "path": ".dockerignore",
+      "accessCount": 2,
+      "lastAccessed": 1776165632710,
+      "type": "file"
+    },
+    {
+      "path": "scripts/upgrade.sh",
+      "accessCount": 2,
+      "lastAccessed": 1776165651130,
+      "type": "file"
+    },
+    {
       "path": "app",
       "accessCount": 1,
       "lastAccessed": 1776070589067,
@@ -467,15 +485,9 @@
       "type": "file"
     },
     {
-      "path": "Dockerfile",
+      "path": "next.config.mjs",
       "accessCount": 1,
-      "lastAccessed": 1776165375981,
-      "type": "file"
-    },
-    {
-      "path": "scripts/upgrade.sh",
-      "accessCount": 1,
-      "lastAccessed": 1776165403673,
+      "lastAccessed": 1776165600335,
       "type": "file"
     }
   ],

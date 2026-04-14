@@ -5,9 +5,20 @@ node_modules
 .omx
 .omc
 .claude
-data/*.db
-data/*.db-shm
-data/*.db-wal
+
+# 本地数据文件
+data/
+
+# 脚本和文档（不参与构建）
+scripts/
+*.md
+!README.md
+
+# 环境变量
+.env*
+!.env.example
+
+# 调试日志
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
