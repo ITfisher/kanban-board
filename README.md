@@ -1,15 +1,16 @@
 # 项目管理看板 (Kanban Board)
 
-一个基于 **Next.js 15 + React 19 + TypeScript** 的中文项目管理看板。应用当前以 **SQLite + Drizzle ORM + Next.js Route Handler** 为持久化核心，覆盖任务看板、服务登记、分支追踪、GitHub Pull Request 联动和团队概览。
+一个基于 **Next.js 15 + React 19 + TypeScript** 的中文项目管理看板。应用当前以 **SQLite + Drizzle ORM + Next.js Route Handler** 为持久化核心，采用“仓库 -> 需求分支 -> 服务阶段流水线 -> PR/快照”的新模型，覆盖任务看板、仓库与服务登记、阶段化 PR 流转和团队概览。
 
 ## ✨ 功能概览
 
 - **仪表盘**：统计任务数量、完成率、优先级/状态分布、服务与成员工作量
 - **任务看板**：五阶段流转（待规划 → 待开发 → 开发中 → 待审核 → 已完成）、拖拽移动、筛选搜索、批量删除
-- **任务详情**：Markdown 描述编辑、服务分支记录、PR 状态查看、测试/主分支差异追踪
-- **服务管理**：维护服务名称、仓库地址、测试分支、主分支等配置
-- **分支管理**：汇总所有服务分支，发起测试环境 / 生产环境 PR
-- **系统设置**：保存 UI 偏好与多套 GitHub / GitHub Enterprise 配置
+- **任务详情**：按需求分支聚合查看挂靠服务、开发者、阶段状态与 PR 历史
+- **服务管理**：维护服务、仓库归属和阶段流水线入口
+- **服务主视角**：按服务查看各需求分支在不同阶段上的状态、PR 与可操作性
+- **仓库管理**：维护仓库根实体与 SCM 显式绑定
+- **系统设置**：保存 UI 偏好与多套 GitHub / GitHub Enterprise SCM 连接
 
 ## 技术栈
 
@@ -74,9 +75,9 @@ docker compose up -d --build
 
 ### SQLite 表设计约束
 
-- 当前表结构按“弱耦合”设计，`service_branches` 只保存 `taskId` / `serviceId` 这样的逻辑关联字段
-- 数据库层不使用外键约束，避免表之间产生硬耦合
-- 任务删除、导入覆盖等需要联动清理的行为，由 `app/api/*` 在应用层显式处理
+- 当前表结构以 `repositories` 为根实体，需求分支和服务都显式挂靠到仓库
+- 阶段化流转通过 `service_stages`、`pull_requests`、`service_branch_stage_snapshots` 表达，而不是在任务里内嵌旧分支 blob
+- 数据库层仍尽量保持弱耦合，跨表清理由 `app/api/*` 在应用层显式处理
 
 ### 数据持久化
 
@@ -102,10 +103,12 @@ pnpm build
 | `/` | 启动页，自动跳转到仪表盘 | `app/page.tsx` |
 | `/dashboard` | 数据总览、状态/优先级/服务统计 | `app/dashboard/page.tsx` |
 | `/tasks` | 主看板页面，包含拖拽、筛选、批量操作 | `app/tasks/page.tsx`、`TaskCard`、`CreateTaskDialog`、`SearchFilter` |
-| `/tasks/[id]` | 单任务详情页，支持 Markdown、服务分支和 PR 状态 | `app/tasks/[id]/page.tsx` |
-| `/services` | 服务登记与仓库配置 | `app/services/page.tsx`、`AddServiceDialog` |
-| `/branches` | 按服务查看分支和部署 PR 流转 | `app/branches/page.tsx` |
-| `/settings` | 偏好设置与 GitHub 配置 | `app/settings/page.tsx` |
+| `/tasks/[id]` | 单任务详情页，按需求分支聚合展示服务、开发者和阶段状态 | `app/tasks/[id]/page.tsx` |
+| `/services` | 服务登记与仓库归属配置 | `app/services/page.tsx`、`AddServiceDialog` |
+| `/services/[id]` | 服务主视角页，支持阶段 Tab 与矩阵/列表切换 | `app/services/[id]/page.tsx` |
+| `/repositories` | 仓库登记、SCM 绑定和仓库概览 | `app/repositories/page.tsx` |
+| `/branches` | 服务流水线入口，选择服务后进入服务主视角 | `app/branches/page.tsx` |
+| `/settings` | 偏好设置与 SCM 连接配置 | `app/settings/page.tsx` |
 | `/api/github/*` | 服务端 GitHub 代理接口 | `app/api/github/pull-request/route.ts`、`app/api/github/pr-status/route.ts`、`app/api/github/branch-diff/route.ts`、`app/api/github/check-merge-status/route.ts` |
 
 ### 页面导航图
@@ -116,9 +119,11 @@ graph TD
   Dashboard --> Sidebar["Sidebar 导航"]
   Sidebar --> Tasks["/tasks"]
   Sidebar --> Services["/services"]
+  Sidebar --> Repositories["/repositories"]
   Sidebar --> Branches["/branches"]
   Sidebar --> Settings["/settings"]
   Tasks --> TaskDetail["/tasks/[id]"]
+  Services --> ServiceDetail["/services/[id]"]
 ```
 
 ## 🔄 数据流
@@ -166,11 +171,18 @@ graph TD
 
 | 表 | 说明 |
 | --- | --- |
+| `repositories` | 仓库根实体，统一承载服务、需求分支和 SCM 绑定 |
+| `services` | 服务登记信息，显式关联 `repository_id` |
+| `service_stages` | 每个服务自定义的阶段流水线 |
 | `tasks` | 任务主表，保存标题、描述、状态、优先级、负责人、JIRA、时间戳 |
-| `service_branches` | 任务下的服务分支，保存 `taskId`、`serviceId`、分支名、PR 状态、分支差异与合并状态；仅保留逻辑关联，不使用外键约束 |
-| `services` | 服务登记信息，保存仓库地址、测试分支、主分支、依赖 |
+| `task_branches` | 需求分支主实体，属于任务且属于仓库 |
+| `task_branch_services` | 需求分支与同仓库服务的挂靠关系 |
+| `task_branch_developers` | 需求分支开发者关系 |
+| `pull_requests` | 各服务阶段的 PR 历史 |
+| `service_branch_stage_snapshots` | 服务主视角当前展示态与操作态 |
+| `scm_connections` / `repository_connections` | SCM 连接与仓库显式绑定 |
+| `events` / `merge_operations` / `sync_runs` | 审计、合并与同步历史 |
 | `settings` | 应用设置单例 |
-| `github_configs` | GitHub / GitHub Enterprise 配置，含 token，仅服务端读取 |
 
 ### Task（摘要）
 
@@ -179,33 +191,30 @@ interface Task {
   id: string
   title: string
   description: string
-  status: "backlog" | "todo" | "in-progress" | "review" | "done"
+  status: "backlog" | "todo" | "in-progress" | "testing" | "done" | "closed"
   priority: "low" | "medium" | "high"
+  ownerUserId?: string
   assignee?: { name: string; avatar?: string }
   jiraUrl?: string
-  serviceBranches?: ServiceBranch[]
+  taskBranches?: TaskBranch[]
   createdAt?: string
   updatedAt?: string
 }
 ```
 
-### ServiceBranch（摘要）
+### TaskBranch（摘要）
 
 ```ts
-interface ServiceBranch {
+interface TaskBranch {
   id: string
-  taskId?: string
-  serviceId?: string
-  serviceName: string
-  branchName: string
-  pullRequestUrl?: string
-  mergedToTest?: boolean
-  mergedToMaster?: boolean
-  prStatus?: PullRequestStatus
-  diffStatus?: {
-    test?: BranchDiffState
-    master?: BranchDiffState
-  }
+  taskId: string
+  repositoryId: string
+  name: string
+  status: "active" | "merged" | "closed" | "archived"
+  developers?: User[]
+  services?: Service[]
+  pullRequests?: PullRequestRecord[]
+  snapshots?: ServiceBranchStageSnapshot[]
 }
 ```
 
@@ -214,23 +223,24 @@ interface ServiceBranch {
 ```ts
 interface Service {
   id: string
+  repositoryId?: string
   name: string
   description: string
-  repository: string
-  testBranch: string
-  masterBranch: string
+  rootPath?: string
+  dependencies: string[]
+  stages?: ServiceStage[]
 }
 ```
 
-### GitHubConfig（摘要）
+### ScmConnection（摘要）
 
 ```ts
-interface GitHubConfig {
+interface ScmConnectionMeta {
   id: string
   name: string
+  provider: "github" | "github-enterprise"
   domain: string
   owner: string
-  token: string
   isDefault?: boolean
 }
 ```

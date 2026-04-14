@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Server, GitBranch, Settings, ChevronLeft, ChevronRight, Kanban, BarChart3 } from "lucide-react"
+import { LayoutDashboard, Server, GitBranch, Settings, ChevronLeft, ChevronRight, Kanban, BarChart3, GitMerge, Users } from "lucide-react"
 
 interface SidebarProps {
   taskCount?: number
@@ -25,6 +25,18 @@ const navigation = [
     href: "/services",
     icon: Server,
     description: "管理项目服务和配置",
+  },
+  {
+    name: "用户管理",
+    href: "/users",
+    icon: Users,
+    description: "维护负责人和开发者",
+  },
+  {
+    name: "仓库管理",
+    href: "/repositories",
+    icon: GitMerge,
+    description: "维护仓库与 SCM 绑定",
   },
   {
     name: "Git 分支",

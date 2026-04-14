@@ -210,38 +210,56 @@
   "hotPaths": [
     {
       "path": "app/tasks/page.tsx",
-      "accessCount": 30,
-      "lastAccessed": 1776166069997,
+      "accessCount": 31,
+      "lastAccessed": 1776185160881,
       "type": "file"
     },
     {
       "path": "app/tasks/[id]/page.tsx",
-      "accessCount": 25,
-      "lastAccessed": 1776164524034,
+      "accessCount": 26,
+      "lastAccessed": 1776185165154,
       "type": "file"
     },
     {
       "path": "components/task-detail-dialog.tsx",
-      "accessCount": 16,
-      "lastAccessed": 1776165012339,
-      "type": "file"
-    },
-    {
-      "path": "components/task-card.tsx",
-      "accessCount": 10,
-      "lastAccessed": 1776166014895,
+      "accessCount": 24,
+      "lastAccessed": 1776186630052,
       "type": "file"
     },
     {
       "path": "components/create-task-dialog.tsx",
-      "accessCount": 7,
-      "lastAccessed": 1776164538413,
+      "accessCount": 15,
+      "lastAccessed": 1776185623387,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 12,
+      "lastAccessed": 1776186582859,
+      "type": "directory"
+    },
+    {
+      "path": "components/task-card.tsx",
+      "accessCount": 11,
+      "lastAccessed": 1776185168910,
       "type": "file"
     },
     {
       "path": "package.json",
       "accessCount": 7,
       "lastAccessed": 1776166062219,
+      "type": "file"
+    },
+    {
+      "path": "components/add-service-dialog.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1776186605841,
+      "type": "file"
+    },
+    {
+      "path": "app/services/page.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1776186606035,
       "type": "file"
     },
     {
@@ -281,21 +299,9 @@
       "type": "file"
     },
     {
-      "path": "",
-      "accessCount": 4,
-      "lastAccessed": 1776077905839,
-      "type": "directory"
-    },
-    {
       "path": "app/branches/page.tsx",
       "accessCount": 4,
       "lastAccessed": 1776078007671,
-      "type": "file"
-    },
-    {
-      "path": "app/services/page.tsx",
-      "accessCount": 4,
-      "lastAccessed": 1776078044991,
       "type": "file"
     },
     {
@@ -317,15 +323,33 @@
       "type": "file"
     },
     {
-      "path": "components/add-service-dialog.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1776077905453,
-      "type": "file"
-    },
-    {
       "path": "components/main-layout.tsx",
       "accessCount": 3,
       "lastAccessed": 1776078268942,
+      "type": "file"
+    },
+    {
+      "path": "lib/schema.ts",
+      "accessCount": 3,
+      "lastAccessed": 1776186590051,
+      "type": "file"
+    },
+    {
+      "path": "lib",
+      "accessCount": 3,
+      "lastAccessed": 1776186597426,
+      "type": "directory"
+    },
+    {
+      "path": "app/api/tasks/route.ts",
+      "accessCount": 3,
+      "lastAccessed": 1776186613894,
+      "type": "file"
+    },
+    {
+      "path": "app/api/tasks/[id]/route.ts",
+      "accessCount": 3,
+      "lastAccessed": 1776186618252,
       "type": "file"
     },
     {
@@ -359,6 +383,54 @@
       "type": "file"
     },
     {
+      "path": "app/api/services/route.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776185858130,
+      "type": "file"
+    },
+    {
+      "path": "design.txt",
+      "accessCount": 2,
+      "lastAccessed": 1776186574725,
+      "type": "file"
+    },
+    {
+      "path": "lib/types.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776186589679,
+      "type": "file"
+    },
+    {
+      "path": "lib/db.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776186590337,
+      "type": "file"
+    },
+    {
+      "path": "lib/github-utils.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776186593782,
+      "type": "file"
+    },
+    {
+      "path": "app/api/settings/route.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776186614090,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/configs/route.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776186618305,
+      "type": "file"
+    },
+    {
+      "path": "app/api/github/configs/[id]/route.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776186621138,
+      "type": "file"
+    },
+    {
       "path": "app",
       "accessCount": 1,
       "lastAccessed": 1776070589067,
@@ -374,12 +446,6 @@
       "path": "hooks",
       "accessCount": 1,
       "lastAccessed": 1776070590570,
-      "type": "directory"
-    },
-    {
-      "path": "lib",
-      "accessCount": 1,
-      "lastAccessed": 1776070591304,
       "type": "directory"
     },
     {
@@ -413,69 +479,15 @@
       "type": "directory"
     },
     {
-      "path": "lib/schema.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776077620054,
-      "type": "file"
-    },
-    {
-      "path": "lib/db.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776077638580,
-      "type": "file"
-    },
-    {
-      "path": "lib/github-utils.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776077652743,
-      "type": "file"
-    },
-    {
       "path": "drizzle.config.ts",
       "accessCount": 1,
       "lastAccessed": 1776077656886,
       "type": "file"
     },
     {
-      "path": "app/api/tasks/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776077695967,
-      "type": "file"
-    },
-    {
-      "path": "app/api/tasks/[id]/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776077711299,
-      "type": "file"
-    },
-    {
-      "path": "app/api/services/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776077716242,
-      "type": "file"
-    },
-    {
       "path": "app/api/services/[id]/route.ts",
       "accessCount": 1,
       "lastAccessed": 1776077726865,
-      "type": "file"
-    },
-    {
-      "path": "app/api/settings/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776077735873,
-      "type": "file"
-    },
-    {
-      "path": "app/api/github/configs/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776077741262,
-      "type": "file"
-    },
-    {
-      "path": "app/api/github/configs/[id]/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776077754285,
       "type": "file"
     },
     {

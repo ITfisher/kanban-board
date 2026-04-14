@@ -1,28 +1,42 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getGitHubConfig, buildRepoApiUrl, toRepoSlug, githubHeaders } from "@/lib/github-utils"
+import { buildRepositoryApiUrl, getGitHubConnection, githubHeaders, resolveRepositoryTarget } from "@/lib/github-utils"
 
 interface BranchDiffBody {
-  serviceName: string
+  repositoryId?: string
+  repoDomain?: string
+  repoOwner?: string
+  repoName?: string
   baseBranch: string
   headBranch: string
-  configId?: string
+  connectionId?: string
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: BranchDiffBody = await request.json()
-    const { serviceName, baseBranch, headBranch, configId } = body
+    const { baseBranch, headBranch, connectionId } = body
 
-    const config = await getGitHubConfig(configId)
-    if (!config) {
-      return NextResponse.json({ error: "GitHub配置未找到或Token未设置" }, { status: 400 })
+    const target = await resolveRepositoryTarget(body)
+    if (!target) {
+      return NextResponse.json(
+        { error: "缺少显式仓库信息，请传 repositoryId 或 repoDomain/repoOwner/repoName" },
+        { status: 400 }
+      )
     }
 
-    const repo = toRepoSlug(serviceName)
-    const apiUrl = `${buildRepoApiUrl(config, repo)}/compare/${baseBranch}...${headBranch}`
+    const connection = await getGitHubConnection({
+      connectionId,
+      repositoryId: target.repositoryId,
+      preferredDomain: target.domain,
+    })
+    if (!connection) {
+      return NextResponse.json({ error: "SCM 连接未找到或 Token 未设置" }, { status: 400 })
+    }
+
+    const apiUrl = `${buildRepositoryApiUrl(connection, target)}/compare/${baseBranch}...${headBranch}`
 
     const response = await fetch(apiUrl, {
-      headers: githubHeaders(config.token),
+      headers: githubHeaders(connection.token),
       signal: AbortSignal.timeout(10000),
     })
 
@@ -30,7 +44,7 @@ export async function POST(request: NextRequest) {
       const error = await response.json()
       let errorMessage = "获取分支差异失败"
       if (response.status === 401) errorMessage = "GitHub访问令牌无效或已过期"
-      else if (response.status === 404) errorMessage = `仓库或分支不存在: ${config.owner}/${repo}`
+      else if (response.status === 404) errorMessage = `仓库或分支不存在: ${target.owner}/${target.repo}`
 
       return NextResponse.json({ error: errorMessage, details: error }, { status: response.status })
     }
@@ -56,7 +70,7 @@ export async function POST(request: NextRequest) {
         deletions: f.deletions,
         changes: f.changes,
       })) ?? [],
-      _config: { name: config.name, owner: config.owner, domain: config.domain, repo, baseBranch, headBranch },
+      _connection: { name: connection.name, owner: target.owner, domain: target.domain, repo: target.repo, baseBranch, headBranch },
     })
   } catch (error) {
     console.error("Error comparing branches:", error)

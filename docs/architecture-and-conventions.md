@@ -9,10 +9,12 @@ This file is intended as README support material for the kanban board project. I
 | `/` | Client redirect entry | Sends users to `/dashboard` |
 | `/dashboard` | Aggregated project analytics | Reads task/service data from `app/api/*`, computes status / priority / workload metrics |
 | `/tasks` | Main kanban workflow | Task creation, filtering, drag-and-drop status changes, batch delete |
-| `/tasks/[id]` | Task detail and branch lifecycle | Markdown editing, service branch tracking, PR / merge status polling |
-| `/services` | Service registry | Service CRUD plus branch defaults and repository metadata |
-| `/branches` | Branch rollout view | Cross-task service branch summary and deploy-to-test / deploy-to-prod PR actions |
-| `/settings` | App configuration | UI preferences, import/export, GitHub config management |
+| `/tasks/[id]` | Task detail and task-branch lifecycle | Task branches, linked services, developers, and stage snapshot status |
+| `/services` | Service registry | Service CRUD plus repository ownership and stage pipeline entry |
+| `/services/[id]` | Service main view | Stage tabs, matrix/list view, PR state, and actionable pipeline status |
+| `/repositories` | Repository registry | Repository CRUD, SCM binding, and repository-scoped overview |
+| `/branches` | Service pipeline entry | Service list that routes into `/services/[id]` |
+| `/settings` | App configuration | UI preferences, import/export, SCM connection management |
 
 ## Page and Layout Flow
 
@@ -48,11 +50,15 @@ flowchart LR
 
 ### Persistent tables
 
-- `tasks`: task records
-- `service_branches`: per-task service branch state, keyed by `serviceId`
-- `services`: service registry, repositories, and branch defaults
+- `repositories`: root entity for services, task branches, and SCM bindings
+- `services` + `service_stages`: service registry and custom stage pipelines
+- `tasks` + `task_branches`: tasks and repository-scoped demand branches
+- `task_branch_services` + `task_branch_developers`: branch links to services and developers
+- `pull_requests`: PR history for each branch/service/stage attempt
+- `service_branch_stage_snapshots`: current service main-view read model
+- `scm_connections` + `repository_connections`: explicit SCM credentials and repository mappings
+- `events`, `merge_operations`, `sync_runs`: audit and synchronization history
 - `settings`: UI preferences singleton
-- `github_configs`: GitHub configuration records, server-readable only
 
 ## Core Component Relationships
 
@@ -66,8 +72,9 @@ flowchart TD
     TasksPage --> ConfirmationDialog[components/confirmation-dialog.tsx]
     TaskDetail[app/tasks/[id]/page.tsx] --> TaskApi[app/api/tasks/*]
     ServicesPage[app/services/page.tsx] --> AddServiceDialog[components/add-service-dialog.tsx]
+    RepositoriesPage[app/repositories/page.tsx] --> TaskApi
     BranchesPage[app/branches/page.tsx] --> TaskApi
-    SettingsPage[app/settings/page.tsx] --> ImportApi[app/api/import/route.ts]
+    SettingsPage[app/settings/page.tsx] --> SettingsApi[app/api/settings/route.ts]
 ```
 
 ## Repository Conventions
@@ -77,7 +84,7 @@ flowchart TD
 - The app is a Next.js 15 App Router project with mostly client-rendered pages.
 - `app/layout.tsx` owns global font, analytics, and toast setup.
 - Business data is persisted in SQLite (`data/kanban.db`) through Drizzle ORM.
-- `app/api/tasks/*`, `app/api/services/*`, `app/api/settings/*`, and `app/api/import/*` are the server-side data boundary.
+- `app/api/tasks/*`, `app/api/task-branches/*`, `app/api/services/*`, `app/api/repositories/*`, `app/api/scm-connections/*`, `app/api/settings/*`, and `app/api/users/*` are the server-side data boundary.
 - GitHub integration is proxied through `app/api/github/*` route handlers.
 
 ### Directory intent
@@ -99,4 +106,4 @@ flowchart TD
 
 - `next.config.mjs` currently skips lint and type failures during production builds. This keeps builds resilient, but it also means `pnpm lint` must stay green outside the build pipeline.
 - Core domain types are now largely centralized in `lib/types.ts`; future fields should be added there first to avoid drift across pages and route handlers.
-- GitHub configs are stored in SQLite and only exposed to the client without tokens; keep token access strictly server-side.
+- SCM connections are stored in SQLite and only exposed to the client without tokens; keep token access strictly server-side.

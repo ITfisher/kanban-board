@@ -1,0 +1,78 @@
+研发效能管理系统设计方案 (TXT 版)
+1. 核心设计理念
+本方案旨在解决 Monorepo（大仓库多服务）模式下的需求迭代管理。通过“分支（Branch）”作为代码实现的载体，通过“服务（Service）”作为发布流转的逻辑单位，实现需求看板与 Git 流程的深度绑定。
+
+2. 核心数据模型
+A. 服务 (Service)
+Service_ID: 唯一标识
+
+Repo_URL: 关联的 Git 仓库地址
+
+Root_Path: 在仓库中的相对路径 (用于 Monorepo 识别)
+
+Pipeline_Config: 自定义阶段序列
+
+示例：[{Stage: "QA", Enabled: true, Target: "qa"},
+{Stage: "Pre", Enabled: false, Target: "pre"},
+{Stage: "Prod", Enabled: true, Target: "main"}]
+
+注：支持自定义开启/跳过特定阶段。
+
+B. 需求分支 (Task Branch)
+Branch_ID: 唯一标识
+
+Task_ID: 关联的需求看板任务
+
+Repo_URL: 必须与挂靠的服务保持一致
+
+Branch_Name: 具体的 Git 特征分支名
+
+Linked_Services: 挂靠的服务列表 [Service_A, Service_B]
+
+C. 合并流水线单据 (Merge Request Tracker)
+PR_ID: GitHub 侧的真实 ID
+
+Stage: 当前所属阶段 (QA/Pre/Prod)
+
+Status: 状态 (OPEN / MERGED / CONFLICT / CLOSED)
+
+Source_Branch: 合并来源 (Feature Branch 或上一个环境分支)
+
+3. 核心业务流程
+3.1 需求看板维度 (分支主视角)
+多服务挂靠：一个需求任务下可创建多个分支，每个分支可勾选属于同一仓库的多个服务。
+
+状态看板：以分支为行，展示其挂靠的所有服务在不同阶段的流转进度。
+
+3.2 服务维度 (操作主视角)
+发起 PR：在服务管理页，针对特定分支点击“提测”或“发布”。
+
+合并路径选择：支持“从需求分支合并”或“从上一个环境分支合并”。
+
+阶段跳转逻辑：如果配置中关闭了“预发布”阶段，系统在 QA 完成后，自动点亮“线上发布”按钮。
+
+3.3 状态联动逻辑
+原子化更新：由于 Service A 和 B 挂靠同一分支，当该分支在 GitHub 上被合并到 QA 分支时，系统轮询感知后，将同步更新所有挂靠在该分支下的服务状态。
+
+依赖检查：Stage N 的 PR 发起前提是 Stage N-1 的所有 PR 必须为 MERGED。
+
+4. 状态感知引擎 (本地主动轮询方案)
+由于系统部署在本地环境且无法接收 Webhook，采用以下逻辑：
+
+触发式拉取：用户进入需求详情页或服务管理页时，主动触发 API 请求。
+
+状态机判定：
+
+state == "open" 且 mergeable == false -> 标记“冲突阻塞”。
+
+merged == true -> 标记“阶段完成”，触发联动逻辑并解锁下一阶段。
+
+速率限制：针对同一 Repo 的请求进行合并去重，避免触发 GitHub API 频率限制。
+
+5. 异常与回滚处理
+冲突处理：系统不自动解冲突，发现冲突后在 UI 界面高亮警告，引导用户去 GitHub 页面人工处理。
+
+发布解耦：本系统仅管理 Git 分支合并（PR 管理），不涉及实际的服务器部署（Deploy）和回滚（Rollback），确保工具的轻量化。
+
+6. 扩展性建议
+存储：本地建议使用 SQLite 或 JSON 文件存储服务配置与 PR 映射关系。

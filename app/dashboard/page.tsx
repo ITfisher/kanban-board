@@ -5,7 +5,7 @@ import { useMemo, useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TASK_STATUS_LABELS } from "@/lib/task-status"
-import { getTaskServiceNames } from "@/lib/task-utils"
+import { getTaskServices } from "@/lib/task-utils"
 import type { Task } from "@/lib/types"
 import {
   BarChart3,
@@ -46,19 +46,23 @@ export default function Dashboard() {
     }, {} as Record<string, number>)
 
     const serviceCounts = tasks.reduce((acc, task) => {
-      const serviceNames = getTaskServiceNames(task)
+      const taskServices = getTaskServices(task)
 
-      if (serviceNames.length === 0) {
-        acc["未关联服务"] = (acc["未关联服务"] || 0) + 1
+      if (taskServices.length === 0) {
+        const unassigned = acc["unassigned"] ?? { label: "未关联服务", count: 0 }
+        unassigned.count += 1
+        acc["unassigned"] = unassigned
         return acc
       }
 
-      serviceNames.forEach((serviceName) => {
-        acc[serviceName] = (acc[serviceName] || 0) + 1
+      taskServices.forEach((service) => {
+        const current = acc[service.id] ?? { label: service.name, count: 0 }
+        current.count += 1
+        acc[service.id] = current
       })
 
       return acc
-    }, {} as Record<string, number>)
+    }, {} as Record<string, { label: string; count: number }>)
 
     const assigneeCounts = tasks.reduce((acc, task) => {
       if (task.assignee?.name) {
@@ -272,15 +276,15 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {Object.entries(stats.serviceCounts)
-                      .sort(([,a], [,b]) => b - a)
+                      .sort(([, a], [, b]) => b.count - a.count)
                       .slice(0, 8)
-                      .map(([service, count]) => {
-                        const percentage = Math.round((count / stats.total) * 100)
+                      .map(([serviceId, serviceStat]) => {
+                        const percentage = Math.round((serviceStat.count / stats.total) * 100)
 
                         return (
-                          <div key={service} className="flex items-center justify-between">
+                          <div key={serviceId} className="flex items-center justify-between">
                             <span className="text-sm font-medium truncate flex-1 mr-2">
-                              {service}
+                              {serviceStat.label}
                             </span>
                             <div className="flex items-center gap-2">
                               <div className="w-16 bg-gray-200 rounded-full h-2">
@@ -290,7 +294,7 @@ export default function Dashboard() {
                                 />
                               </div>
                               <Badge variant="secondary" className="text-xs">
-                                {count}
+                                {serviceStat.count}
                               </Badge>
                             </div>
                           </div>

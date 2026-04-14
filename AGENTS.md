@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-A Chinese-language project management Kanban board (项目管理看板) built with Next.js 15 App Router, React 19, and TypeScript. Features task tracking with GitHub PR integration, multi-service branch management, and a dashboard for team analytics.
+A Chinese-language project management Kanban board (项目管理看板) built with Next.js 15 App Router, React 19, and TypeScript. The current codebase has been refactored to a repository-centric model: tasks own `task_branches`, branches attach to multiple same-repository services, services define custom stage pipelines, and GitHub state is tracked through PR history plus service-stage snapshots.
 
 ## Development Commands
 
@@ -29,57 +29,48 @@ No test suite exists in this project.
 |-------|---------|
 | `/` | Redirects to `/dashboard` |
 | `/dashboard` | Analytics: task counts, completion rate, priority/status/service distribution |
-| `/tasks` | Main Kanban board with 5 columns (backlog→todo→in-progress→review→done) |
-| `/tasks/[id]` | Task detail with markdown editor, service branch management, and PR tracking |
-| `/branches` | Git branch overview across services |
+| `/tasks` | Main Kanban board with 5 columns (backlog→todo→in-progress→testing→done) |
+| `/tasks/[id]` | Task detail showing task branches, linked services, developers, and stage snapshots |
+| `/branches` | Service pipeline entry; choose a service and drill into its main view |
 | `/services` | Service registry management |
-| `/settings` | App settings + GitHub configuration |
+| `/services/[id]` | Service main view with stage tabs and matrix/list pipeline views |
+| `/repositories` | Repository registry and SCM binding management |
+| `/settings` | App settings + SCM connection configuration |
 
 ### API Routes (GitHub Integration)
 
 All routes live under `app/api/github/` and proxy calls server-side to avoid CORS and keep tokens out of the browser:
 
-- `POST /api/github/pull-request` — Create a PR; selects GitHub config by `configId` or auto-matches by service repository domain
-- `GET /api/github/pr-status` — Fetch PR state, merge status, and CI check results
-- `POST /api/github/branch-diff` — Compare branch divergence against test/master
-- `POST /api/github/check-merge-status` — Check if branch is already merged
+- `POST /api/github/pull-request` — Create a PR for a specific `task_branch + service + stage`, using explicit repository identity
+- `GET /api/github/pr-status` — Fetch PR state, merge status, draft/mergeable state, and CI checks
+- `POST /api/github/branch-diff` — Compare a branch against a specific stage target branch
+- `POST /api/github/check-merge-status` — Check whether a branch has already been merged into a target branch
 
 Supports both GitHub.com and GitHub Enterprise by routing to `https://{domain}/api/v3/...` when domain ≠ `github.com`.
 
 ### Data Model
 
-All data lives in localStorage under these keys:
+Business data is persisted in SQLite through `app/api/*` routes. The main runtime model is:
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `kanban-tasks` | `Task[]` | All tasks |
-| `kanban-services` | `Service[]` | Service registry |
-| `kanban-settings` | `SettingsData` | User preferences + GitHub configs |
-
-**Task** shape (abridged):
-```ts
-{
-  id, title, description, status, priority,
-  assignee?: { name, avatar? },
-  jiraUrl?,
-  serviceBranches?: ServiceBranch[],   // per-service branches for this task
-  createdAt?, updatedAt?
-}
-```
-
-**ServiceBranch** tracks per-branch state: `branchName`, `pullRequestUrl`, `prStatus` (open/closed/merged, CI checks), `diffStatus` (ahead/behind vs test and master), `mergedToTest`, `mergedToMaster`.
-
-**Settings / GitHub Configs**: Multiple GitHub configs supported (`GitHubConfig[]`), each with `id`, `name`, `domain`, `owner`, `token`. One can be marked `isDefault`. The API routes receive these configs from the client on each request (configs are stored in localStorage, not on the server).
+- `repositories` — root entity for services, task branches, and SCM bindings
+- `services` + `service_stages` — service registry plus custom stage pipelines
+- `tasks` + `task_branches` — tasks and their repository-scoped feature branches
+- `task_branch_services` — same-repository branch-to-service links
+- `task_branch_developers` — developers assigned to a task branch
+- `pull_requests` — PR history for each branch/service/stage attempt
+- `service_branch_stage_snapshots` — current service main-view read model
+- `scm_connections` + `repository_connections` — explicit SCM credentials and repository bindings
+- `events`, `merge_operations`, `sync_runs` — audit and sync history
 
 ### Key Components
 
-- `components/main-layout.tsx` — Wraps all pages with sidebar navigation
+- `components/app-shell.tsx` — Persistent app chrome and sidebar shell
+- `components/sidebar.tsx` — Main navigation for dashboard, repositories, services, branches, tasks, settings
 - `components/task-card.tsx` — Kanban card with drag handles
 - `components/create-task-dialog.tsx` — New task form
 - `components/task-detail-dialog.tsx` — Inline task editing dialog
-- `components/git-branch-manager.tsx` — Manages `serviceBranches` on a task; triggers PR creation
 - `components/branch-name-generator.tsx` — UI for `lib/branch-generator.ts`
-- `components/service-manager.tsx` / `components/add-service-dialog.tsx` — Service CRUD
+- `components/add-service-dialog.tsx` — Service creation dialog with repository selection/creation
 
 ### Branch Name Generation (`lib/branch-generator.ts`)
 
@@ -91,4 +82,4 @@ Auto-detects task type (feature/bugfix/hotfix/refactor/docs) from task title/des
 - Tailwind CSS v4 with OKLCH color space, cyan primary, green accents, dark mode via CSS custom properties
 - Keyboard shortcuts on the Kanban board: `Ctrl+K` (search), `Ctrl+Shift+A` (select all), `Ctrl+Shift+D` (batch delete)
 - Drag and drop uses the native HTML5 API (no library)
-- `useLocalStorage` initializes with `initialValue` on first render then hydrates from `window.localStorage` in a `useEffect` — components must handle the initial empty/default state
+- `/branches` is currently a service pipeline entry page; the actual service main pipeline view lives at `/services/[id]`

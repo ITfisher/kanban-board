@@ -10,8 +10,17 @@ import { TaskCard } from "@/components/task-card"
 import { toast } from "@/hooks/use-toast"
 import { DEFAULT_SETTINGS } from "@/lib/default-settings"
 import { isCompletedTaskStatus, TASK_STATUS_COLUMNS, TASK_STATUS_LABELS } from "@/lib/task-status"
-import type { SettingsData, Task, TaskStatus } from "@/lib/types"
+import type { SettingsData, Task, TaskBranch, TaskStatus } from "@/lib/types"
 import { Eye, EyeOff } from "lucide-react"
+
+type CreateTaskInput = Omit<Task, "id" | "taskBranches"> & {
+  taskBranches?: Array<
+    Pick<TaskBranch, "id" | "repositoryId" | "createdAt"> & {
+      name: string
+      serviceIds: string[]
+    }
+  >
+}
 
 const COLUMN_VISIBILITY_STORAGE_KEY = "kanban-board:task-column-visibility"
 
@@ -191,22 +200,30 @@ export default function KanbanBoard() {
     setCompletedDateEnd("")
   }
 
-  const handleCreateTask = async (newTaskData: Omit<Task, "id">) => {
+  const handleCreateTask = async (newTaskData: CreateTaskInput) => {
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newTaskData),
       })
-      if (!res.ok) throw new Error("Failed to create task")
+      if (!res.ok) {
+        const error = await res.json().catch(() => null)
+        throw new Error(error?.error || "创建任务失败")
+      }
       const created = await res.json()
       setTasks((prev) => [...prev, created])
       toast({
         title: "任务创建成功",
         description: `任务 "${created.title}" 已创建`,
       })
-    } catch {
-      toast({ title: "创建任务失败", description: "无法创建任务，请重试", variant: "destructive" })
+    } catch (error) {
+      toast({
+        title: "创建任务失败",
+        description: error instanceof Error ? error.message : "无法创建任务，请重试",
+        variant: "destructive",
+      })
+      throw error
     }
   }
 

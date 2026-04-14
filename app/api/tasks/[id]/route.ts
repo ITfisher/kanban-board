@@ -1,27 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
-import { tasks, serviceBranches, services } from "@/lib/schema"
-import { requireBranchService } from "@/lib/service-branch-utils"
-import { isCompletedTaskStatus, normalizeTaskStatus } from "@/lib/task-status"
-import { toClientTask } from "@/lib/task-data"
-
-function getCompletedAtForStatus(status: unknown, previousCompletedAt?: string | null) {
-  if (isCompletedTaskStatus(typeof status === "string" ? normalizeTaskStatus(status) : null)) {
-    return previousCompletedAt ?? new Date().toISOString()
-  }
-  return null
-}
+import { getTaskPayload } from "@/lib/domain-data"
+import { refreshServiceBranchStageSnapshots } from "@/lib/service-pipeline"
+import { taskAssignments, tasks } from "@/lib/schema"
+import { resolveTaskOwnerPersistence, syncTaskOwnerAssignment } from "@/lib/task-assignment-write"
+import { getCompletedAtForTaskStatus, replaceTaskBranchesForTask } from "@/lib/task-branch-write"
+import { normalizeTaskStatus } from "@/lib/task-status"
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const taskRows = await db.select().from(tasks).where(eq(tasks.id, id))
-    if (taskRows.length === 0) {
+    const task = await getTaskPayload(id)
+    if (!task) {
       return NextResponse.json({ error: "任务不存在" }, { status: 404 })
     }
-    const branches = await db.select().from(serviceBranches).where(eq(serviceBranches.taskId, id))
-    return NextResponse.json(toClientTask(taskRows[0], branches))
+    return NextResponse.json(task)
   } catch (error) {
     console.error("GET /api/tasks/[id] error:", error)
     return NextResponse.json({ error: "获取任务失败" }, { status: 500 })
@@ -38,7 +32,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "任务不存在" }, { status: 404 })
     }
 
-    const { title, description, status, priority, assignee, jiraUrl, serviceBranches: incomingBranches } = body
+    const {
+      title,
+      description,
+      status,
+      priority,
+      ownerUserId,
+      assignee,
+      jiraUrl,
+      taskBranches: incomingTaskBranches,
+    } = body
 
     const updateData: Partial<typeof tasks.$inferInsert> = {
       updatedAt: new Date().toISOString(),
@@ -47,73 +50,40 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (description !== undefined) updateData.description = description
     if (status !== undefined) {
       updateData.status = normalizeTaskStatus(status)
-      updateData.completedAt = getCompletedAtForStatus(status, taskRows[0].completedAt)
+      updateData.completedAt = getCompletedAtForTaskStatus(normalizeTaskStatus(status), taskRows[0].completedAt)
     }
     if (priority !== undefined) updateData.priority = priority
-    if (assignee !== undefined) {
-      updateData.assigneeName = assignee?.name ?? null
-      updateData.assigneeAvatar = assignee?.avatar ?? null
+    if (ownerUserId !== undefined || assignee !== undefined) {
+      const ownerPersistence = await resolveTaskOwnerPersistence({
+        ownerUserId: ownerUserId !== undefined ? ownerUserId : taskRows[0].ownerUserId,
+        assignee,
+      })
+      updateData.ownerUserId = ownerPersistence.ownerUserId
+      updateData.assigneeName = ownerPersistence.assigneeName
+      updateData.assigneeAvatar = ownerPersistence.assigneeAvatar
+      await syncTaskOwnerAssignment(id, ownerPersistence.ownerUserId)
     }
     if (jiraUrl !== undefined) updateData.jiraUrl = jiraUrl ?? null
 
     await db.update(tasks).set(updateData).where(eq(tasks.id, id))
 
-    if (incomingBranches !== undefined) {
-      const existingServices = (await db.select().from(services)).map((service) => ({
-        id: service.id,
-        name: service.name,
-      }))
-
-      await db.delete(serviceBranches).where(eq(serviceBranches.taskId, id))
-
-      if (Array.isArray(incomingBranches) && incomingBranches.length > 0) {
-        const now = new Date().toISOString()
-        await db.insert(serviceBranches).values(
-          incomingBranches.map((b: {
-            id?: string
-            serviceId?: string
-            serviceName: string
-            branchName: string
-            pullRequestUrl?: string
-            testPullRequestUrl?: string
-            masterPullRequestUrl?: string
-            mergedToTest?: boolean
-            mergedToMaster?: boolean
-            testMergeDate?: string
-            masterMergeDate?: string
-            lastCommit?: string
-            lastStatusCheck?: string
-            prStatus?: unknown
-            diffStatus?: unknown
-            createdAt?: string
-          }) => ({
-            ...requireBranchService(existingServices, b),
-            id: b.id ?? crypto.randomUUID(),
-            taskId: id,
-            branchName: b.branchName,
-            pullRequestUrl: b.pullRequestUrl ?? null,
-            testPullRequestUrl: b.testPullRequestUrl ?? null,
-            masterPullRequestUrl: b.masterPullRequestUrl ?? null,
-            mergedToTest: b.mergedToTest ? 1 : 0,
-            mergedToMaster: b.mergedToMaster ? 1 : 0,
-            testMergeDate: b.testMergeDate ?? null,
-            masterMergeDate: b.masterMergeDate ?? null,
-            lastCommit: b.lastCommit ?? null,
-            lastStatusCheck: b.lastStatusCheck ?? null,
-            prStatus: b.prStatus ? JSON.stringify(b.prStatus) : null,
-            diffStatus: b.diffStatus ? JSON.stringify(b.diffStatus) : null,
-            createdAt: b.createdAt ?? now,
-          }))
-        )
-      }
+    if (incomingTaskBranches !== undefined) {
+      const savedTaskBranches = await replaceTaskBranchesForTask(id, {
+        taskBranches: incomingTaskBranches,
+      })
+      await refreshServiceBranchStageSnapshots({
+        taskBranchIds: savedTaskBranches.map((branch) => branch.id),
+      })
     }
 
-    const updated = await db.select().from(tasks).where(eq(tasks.id, id))
-    const branches = await db.select().from(serviceBranches).where(eq(serviceBranches.taskId, id))
-    return NextResponse.json(toClientTask(updated[0], branches))
+    const updated = await getTaskPayload(id)
+    return NextResponse.json(updated)
   } catch (error) {
     console.error("PUT /api/tasks/[id] error:", error)
-    return NextResponse.json({ error: "更新任务失败" }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "更新任务失败" },
+      { status: 500 }
+    )
   }
 }
 
@@ -124,10 +94,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     if (taskRows.length === 0) {
       return NextResponse.json({ error: "任务不存在" }, { status: 404 })
     }
-    db.transaction((tx) => {
-      tx.delete(serviceBranches).where(eq(serviceBranches.taskId, id)).run()
-      tx.delete(tasks).where(eq(tasks.id, id)).run()
-    })
+    await replaceTaskBranchesForTask(id, { taskBranches: [] })
+    await db.delete(taskAssignments).where(eq(taskAssignments.taskId, id))
+    await db.delete(tasks).where(eq(tasks.id, id))
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("DELETE /api/tasks/[id] error:", error)

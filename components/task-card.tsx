@@ -1,389 +1,166 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { GitBranch, Save, X, GripVertical, Plus } from "lucide-react"
-import { TaskDetailDialog } from "./task-detail-dialog"
-import { toast } from "@/hooks/use-toast"
-import { useAppSettings } from "@/hooks/use-app-settings"
-import { buildTaskBranchName } from "@/lib/branch-name"
-import { buildSmartCheckoutCommand } from "@/lib/git-commands"
-import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
-import type { Service, ServiceBranch, Task } from "@/lib/types"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import type { Task, TaskBranch } from "@/lib/types"
+import { TASK_STATUS_LABELS } from "@/lib/task-status"
+import { ExternalLink, GitBranch } from "lucide-react"
 
+type TaskBranchCardView = TaskBranch & {
+  services?: Array<{
+    id: string
+    name: string
+  }>
+  repository?: {
+    id: string
+    fullName?: string
+  }
+}
 
 interface TaskCardProps {
   task: Task
-  onUpdate: (task: Task) => void
+  onUpdate?: (task: Task) => void
   isDragging?: boolean
   compactView?: boolean
   showAssigneeAvatars?: boolean
 }
 
-export function TaskCard({ task, onUpdate, isDragging = false, compactView = false, showAssigneeAvatars = true }: TaskCardProps) {
-  const { settings } = useAppSettings()
-  const [isEditing, setIsEditing] = useState(false)
-  const [editedTask, setEditedTask] = useState<Task>(task)
-  const [showDetailDialog, setShowDetailDialog] = useState(false)
-  const [services, setServices] = useState<Service[]>([])
+const branchStatusLabels: Record<string, string> = {
+  active: "进行中",
+  merged: "已合并",
+  closed: "已关闭",
+  archived: "已归档",
+}
 
-  useEffect(() => {
-    fetch("/api/services")
-      .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data)) setServices(data) })
-      .catch(() => {})
-  }, [])
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-100 text-red-800 border-red-200"
-      case "medium":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
-      case "low":
-        return "bg-green-100 text-green-800 border-green-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
-    }
+function getBranchStatusColor(status: string) {
+  switch (status) {
+    case "merged":
+      return "bg-green-100 text-green-800"
+    case "closed":
+      return "bg-zinc-100 text-zinc-800"
+    case "archived":
+      return "bg-slate-100 text-slate-800"
+    default:
+      return "bg-amber-100 text-amber-800"
   }
+}
 
-  const getBranchStatusColor = (status: string) => {
-    switch (status) {
-      case "已合并主分支":
-        return "bg-green-100 text-green-800"
-      case "已合并测试分支":
-        return "bg-blue-100 text-blue-800"
-      default:
-        return "bg-amber-100 text-amber-800"
-    }
+function getPriorityColor(priority: string) {
+  switch (priority) {
+    case "high":
+      return "bg-red-100 text-red-800 border-red-200"
+    case "medium":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200"
+    case "low":
+      return "bg-green-100 text-green-800 border-green-200"
+    default:
+      return "bg-gray-100 text-gray-800 border-gray-200"
   }
+}
 
-  const getBranchStatusLabel = (branch: ServiceBranch) => {
-    if (branch.mergedToMaster) return "已合并主分支"
-    if (branch.mergedToTest) return "已合并测试分支"
-    return "开发中"
+function getTaskBranches(task: Task): TaskBranchCardView[] {
+  return (task.taskBranches ?? []) as TaskBranchCardView[]
+}
+
+function getServiceSummary(branch: TaskBranchCardView): string {
+  const names = (branch.services ?? []).map((service) => service.name).filter(Boolean)
+  if (names.length <= 2) {
+    return names.join("、")
   }
+  return `${names.slice(0, 2).join("、")} +${names.length - 2}`
+}
 
-  const handleSave = () => {
-    onUpdate(editedTask)
-    setIsEditing(false)
-  }
-
-  const handleCancel = () => {
-    setEditedTask(task)
-    setIsEditing(false)
-  }
-
-  const handleAddServiceBranch = () => {
-    const defaultService = services[0]
-    const newBranch: ServiceBranch = {
-      id: Date.now().toString(),
-      serviceId: defaultService?.id,
-      serviceName: defaultService?.name || "",
-      branchName: buildTaskBranchName(settings.branchPrefix, editedTask.title, Date.now()),
-      createdAt: new Date().toISOString(),
-    }
-
-    setEditedTask({
-      ...editedTask,
-      serviceBranches: [...(editedTask.serviceBranches || []), newBranch],
-    })
-  }
-
-  const handleUpdateServiceBranch = (branchId: string, updates: Partial<ServiceBranch>) => {
-    setEditedTask({
-      ...editedTask,
-      serviceBranches: editedTask.serviceBranches?.map((branch) =>
-        branch.id === branchId ? { ...branch, ...updates } : branch,
-      ),
-    })
-  }
-
-  const handleDeleteServiceBranch = (branchId: string) => {
-    setEditedTask({
-      ...editedTask,
-      serviceBranches: editedTask.serviceBranches?.filter((branch) => branch.id !== branchId),
-    })
-  }
-
-  const handleCopyGitCommand = (branch: Pick<ServiceBranch, "branchName" | "serviceId" | "serviceName">) => {
-    const service = resolveServiceFromBranch(services, branch)
-    if (!service) {
-      toast({
-        title: "服务配置不存在",
-        description: `找不到服务 "${branch.serviceName}" 的配置`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    const masterBranch = service?.masterBranch || "main"
-    const command = buildSmartCheckoutCommand(branch.branchName, masterBranch)
-
-    navigator.clipboard.writeText(command)
-    toast({
-      title: "已复制Git命令到剪贴板",
-      description: `智能分支切换：本地存在→切换，远程存在→检出，都不存在→创建并推送`,
-    })
-  }
-
-  const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData("text/plain", task.id)
-    e.dataTransfer.effectAllowed = "move"
-  }
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    if (e.target instanceof HTMLElement && (e.target.closest("button") || e.target.closest("a"))) {
-      return
-    }
-    setShowDetailDialog(true)
-  }
-
-  if (isEditing) {
-    return (
-      <Card className="border-primary/50 shadow-md">
-        <CardHeader className="pb-2">
-          <Input
-            value={editedTask.title}
-            onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
-            className="font-medium"
-            placeholder="任务标题"
-          />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea
-            value={editedTask.description}
-            onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
-            placeholder="任务描述"
-            rows={2}
-          />
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs">优先级</Label>
-              <Select
-                value={editedTask.priority}
-                onValueChange={(value: "low" | "medium" | "high") => setEditedTask({ ...editedTask, priority: value })}
-              >
-                <SelectTrigger className="h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">低</SelectItem>
-                  <SelectItem value="medium">中</SelectItem>
-                  <SelectItem value="high">高</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">服务分支</Label>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleAddServiceBranch}
-                className="h-6 text-xs bg-transparent"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                添加
-              </Button>
-            </div>
-
-            {editedTask.serviceBranches && editedTask.serviceBranches.length > 0 && (
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {editedTask.serviceBranches.map((branch) => (
-                  <div key={branch.id} className="border rounded p-2 space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Select
-                        value={branch.serviceId || ""}
-                        onValueChange={(value) => {
-                          const selectedService = services.find((service) => service.id === value)
-                          if (!selectedService) return
-                          handleUpdateServiceBranch(branch.id, {
-                            serviceId: selectedService.id,
-                            serviceName: selectedService.name,
-                          })
-                        }}
-                      >
-                        <SelectTrigger className="h-6 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {services.map((service) => (
-                            <SelectItem key={service.id} value={service.id}>
-                              {service.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        value={getBranchStatusLabel(branch)}
-                        disabled
-                        className="h-6 text-xs"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Input
-                        value={branch.branchName}
-                        onChange={(e) => handleUpdateServiceBranch(branch.id, { branchName: e.target.value })}
-                        placeholder="分支名"
-                        className="h-6 text-xs font-mono flex-1"
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleCopyGitCommand(branch)}
-                        className="h-6 w-6 p-0"
-                        title="复制Git命令：若分支存在则切换，若不存在则从主分支创建"
-                      >
-                        <GitBranch className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDeleteServiceBranch(branch.id)}
-                        className="h-6 w-6 p-0 text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <Label className="text-xs">负责人</Label>
-            <Input
-              value={editedTask.assignee?.name || ""}
-              onChange={(e) =>
-                setEditedTask({
-                  ...editedTask,
-                  assignee: e.target.value ? { name: e.target.value } : undefined,
-                })
-              }
-              placeholder="负责人姓名"
-              className="h-8"
-            />
-          </div>
-
-          <div className="flex gap-2 pt-2">
-            <Button size="sm" onClick={handleSave} className="flex-1">
-              <Save className="h-3 w-3 mr-1" />
-              保存
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleCancel} className="flex-1 bg-transparent">
-              <X className="h-3 w-3 mr-1" />
-              取消
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
+export function TaskCard({
+  task,
+  isDragging = false,
+  compactView = false,
+  showAssigneeAvatars = true,
+}: TaskCardProps) {
+  const taskBranches = getTaskBranches(task)
+  const updatedAtLabel = task.updatedAt ? new Date(task.updatedAt).toLocaleString() : "未记录"
 
   return (
-    <>
-      <Card
-        className={`group cursor-pointer overflow-hidden hover:shadow-md transition-all duration-200 ${
-          isDragging ? "opacity-50 rotate-1 scale-105 shadow-lg" : ""
-        }`}
-        draggable={!isEditing}
-        onDragStart={handleDragStart}
-        onClick={handleCardClick}
-      >
-        <CardHeader className={compactView ? "pb-1 px-3 pt-3" : "pb-2"}>
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex min-w-0 flex-1 items-start gap-2">
-              <GripVertical className={`${compactView ? "h-3 w-3" : "h-4 w-4"} text-muted-foreground mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab`} />
-              <CardTitle className={`${compactView ? "text-xs" : "text-sm"} line-clamp-2 min-w-0 break-words font-medium leading-tight hover:text-primary transition-colors`}>
-                {task.title}
-              </CardTitle>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className={compactView ? "pt-0 px-3 pb-3" : "pt-0"}>
-          {!compactView && (
-            <p className="mb-3 line-clamp-3 break-words text-xs leading-relaxed text-muted-foreground">
-              {task.description}
-            </p>
-          )}
-
-          <div className={compactView ? "space-y-1" : "space-y-2"}>
-            <div className="flex items-center justify-between">
-              <Badge className={`${compactView ? "text-xs px-1 py-0 h-4" : "text-xs"} ${getPriorityColor(task.priority)}`}>
+    <Card className={isDragging ? "opacity-60" : undefined}>
+      <CardHeader className={compactView ? "p-3" : "p-4"}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-2">
+            <CardTitle className="line-clamp-2 text-base">{task.title}</CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">{TASK_STATUS_LABELS[task.status] ?? task.status}</Badge>
+              <Badge className={`${getPriorityColor(task.priority)} border`}>
                 {task.priority === "high" ? "高" : task.priority === "medium" ? "中" : "低"}
               </Badge>
-            </div>
-
-            {task.serviceBranches && task.serviceBranches.length > 0 && !compactView && (
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">服务分支:</div>
-                <div className="space-y-1 max-h-20 overflow-y-auto">
-                  {task.serviceBranches.slice(0, 2).map((branch) => (
-                    <div key={branch.id} className="flex min-w-0 items-center gap-1 rounded bg-muted/50 px-2 py-1 text-xs">
-                      <GitBranch className="h-3 w-3 text-muted-foreground" />
-                      <span className="shrink-0 font-medium text-muted-foreground">{branch.serviceName}:</span>
-                      <span className="min-w-0 flex-1 truncate font-mono">{branch.branchName}</span>
-                      <Badge className={`max-w-[96px] shrink-0 truncate text-xs ${getBranchStatusColor(getBranchStatusLabel(branch))}`}>
-                        {getBranchStatusLabel(branch)}
-                      </Badge>
-                    </div>
-                  ))}
-                  {task.serviceBranches.length > 2 && (
-                    <div className="text-xs text-muted-foreground text-center">
-                      +{task.serviceBranches.length - 2} 个分支
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {task.serviceBranches && task.serviceBranches.length > 0 && compactView && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Badge variant="secondary" className="gap-1">
                 <GitBranch className="h-3 w-3" />
-                <span className="truncate">{task.serviceBranches.length} 个分支</span>
-              </div>
-            )}
-
-
-            <div className="flex items-center justify-between">
-
-              {task.assignee && showAssigneeAvatars && (
-                <div className="flex items-center gap-1">
-                  <Avatar className={compactView ? "h-4 w-4" : "h-5 w-5"}>
-                    <AvatarImage src={task.assignee.avatar || "/placeholder.svg"} />
-                    <AvatarFallback className="text-xs">{task.assignee.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  {!compactView && (
-                    <span className="truncate text-xs text-muted-foreground">{task.assignee.name}</span>
-                  )}
-                </div>
-              )}
+                {taskBranches.length} 个需求分支
+              </Badge>
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0">
+            <Link href={`/tasks/${task.id}`}>
+              <ExternalLink className="h-4 w-4" />
+              <span className="sr-only">查看任务详情</span>
+            </Link>
+          </Button>
+        </div>
+      </CardHeader>
 
-      <TaskDetailDialog 
-        task={task} 
-        open={showDetailDialog} 
-        onOpenChange={setShowDetailDialog}
-        onUpdateTask={onUpdate}
-      />
-    </>
+      {!compactView && (
+        <CardContent className="space-y-3 px-4 pb-3">
+          {task.description ? (
+            <p className="line-clamp-3 text-sm text-muted-foreground">{task.description}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">暂无任务描述</p>
+          )}
+
+          {taskBranches.length > 0 ? (
+            <div className="space-y-2">
+              {taskBranches.slice(0, 3).map((branch) => (
+                <div key={branch.id} className="rounded-md border bg-muted/30 px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-mono text-xs text-foreground">{branch.name}</div>
+                    <Badge className={`${getBranchStatusColor(branch.status)} text-xs`}>
+                      {branchStatusLabels[branch.status] || branch.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {getServiceSummary(branch) || "未关联服务"}
+                  </div>
+                </div>
+              ))}
+              {taskBranches.length > 3 && (
+                <div className="text-xs text-muted-foreground">还有 {taskBranches.length - 3} 个需求分支未展开</div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+              还没有创建需求分支
+            </div>
+          )}
+        </CardContent>
+      )}
+
+      <CardFooter className="flex items-center justify-between gap-3 px-4 pb-4 pt-0 text-xs text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-2">
+          {task.assignee ? (
+            <div className="flex min-w-0 items-center gap-2">
+              {showAssigneeAvatars && (
+                <Avatar className="h-5 w-5">
+                  <AvatarImage src={task.assignee.avatar} alt={task.assignee.name} />
+                  <AvatarFallback>{task.assignee.name.slice(0, 1)}</AvatarFallback>
+                </Avatar>
+              )}
+              <span className="truncate">{task.assignee.name}</span>
+            </div>
+          ) : (
+            <span>未分配负责人</span>
+          )}
+        </div>
+        <span className="shrink-0">更新于 {updatedAtLabel}</span>
+      </CardFooter>
+    </Card>
   )
 }

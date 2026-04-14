@@ -1,16 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getGitHubConfig, buildRepoApiUrl, toRepoSlug, githubHeaders } from "@/lib/github-utils"
+import { buildRepositoryApiUrl, getGitHubConnection, githubHeaders, resolveRepositoryTarget } from "@/lib/github-utils"
 
 interface PRStatusRequest {
-  serviceName: string
+  repositoryId?: string
+  repoDomain?: string
+  repoOwner?: string
+  repoName?: string
   pullRequestUrl: string
-  configId?: string
+  connectionId?: string
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: PRStatusRequest = await request.json()
-    const { serviceName, pullRequestUrl, configId } = body
+    const { pullRequestUrl, connectionId } = body
 
     const prMatch = pullRequestUrl.match(/\/pull\/(\d+)/)
     if (!prMatch) {
@@ -18,14 +21,25 @@ export async function POST(request: NextRequest) {
     }
     const prNumber = prMatch[1]
 
-    const selectedConfig = await getGitHubConfig(configId)
-    if (!selectedConfig) {
-      return NextResponse.json({ error: "GitHub配置未找到或Token未设置" }, { status: 400 })
+    const target = await resolveRepositoryTarget(body)
+    if (!target) {
+      return NextResponse.json(
+        { error: "缺少显式仓库信息，请传 repositoryId 或 repoDomain/repoOwner/repoName" },
+        { status: 400 }
+      )
     }
 
-    const repo = toRepoSlug(serviceName)
-    const baseUrl = buildRepoApiUrl(selectedConfig, repo)
-    const headers = githubHeaders(selectedConfig.token)
+    const connection = await getGitHubConnection({
+      connectionId,
+      repositoryId: target.repositoryId,
+      preferredDomain: target.domain,
+    })
+    if (!connection) {
+      return NextResponse.json({ error: "SCM 连接未找到或 Token 未设置" }, { status: 400 })
+    }
+
+    const baseUrl = buildRepositoryApiUrl(connection, target)
+    const headers = githubHeaders(connection.token)
 
     const prResponse = await fetch(`${baseUrl}/pulls/${prNumber}`, {
       headers,
@@ -85,6 +99,7 @@ export async function POST(request: NextRequest) {
       head_sha: prData.head.sha,
       html_url: prData.html_url,
       checks: checksData,
+      repository: { domain: target.domain, owner: target.owner, repo: target.repo },
     })
   } catch (error) {
     console.error("Error fetching PR status:", error)

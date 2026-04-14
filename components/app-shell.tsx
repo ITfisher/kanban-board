@@ -16,7 +16,15 @@ interface AppShellProps {
   children: React.ReactNode
 }
 
-const shellRouteMatchers = [/^\/dashboard$/, /^\/services(?:\/|$)/, /^\/branches(?:\/|$)/, /^\/tasks(?:\/|$)/, /^\/settings(?:\/|$)/]
+const shellRouteMatchers = [
+  /^\/dashboard$/,
+  /^\/services(?:\/|$)/,
+  /^\/users(?:\/|$)/,
+  /^\/repositories(?:\/|$)/,
+  /^\/branches(?:\/|$)/,
+  /^\/tasks(?:\/|$)/,
+  /^\/settings(?:\/|$)/,
+]
 
 const emptyStats: ShellStats = {
   taskCount: 0,

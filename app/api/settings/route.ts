@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
-import { settings, githubConfigs } from "@/lib/schema"
+import { settings } from "@/lib/schema"
 
-function toClientSettings(s: typeof settings.$inferSelect, configs: (typeof githubConfigs.$inferSelect)[]) {
+function toClientSettings(s: typeof settings.$inferSelect) {
   return {
     notifications: s.notifications === 1,
     darkMode: s.darkMode === 1,
@@ -11,26 +11,17 @@ function toClientSettings(s: typeof settings.$inferSelect, configs: (typeof gith
     showAssigneeAvatars: s.showAssigneeAvatars === 1,
     defaultPriority: s.defaultPriority,
     branchPrefix: s.branchPrefix,
-    // Return configs WITHOUT tokens
-    githubConfigs: configs.map((c) => ({
-      id: c.id,
-      name: c.name,
-      domain: c.domain,
-      owner: c.owner,
-      isDefault: c.isDefault === 1,
-    })),
   }
 }
 
 export async function GET() {
   try {
     const rows = await db.select().from(settings).where(eq(settings.id, "singleton"))
-    const configs = await db.select().from(githubConfigs)
     const row = rows[0]
     if (!row) {
       return NextResponse.json({ error: "设置不存在" }, { status: 404 })
     }
-    return NextResponse.json(toClientSettings(row, configs))
+    return NextResponse.json(toClientSettings(row))
   } catch (error) {
     console.error("GET /api/settings error:", error)
     return NextResponse.json({ error: "获取设置失败" }, { status: 500 })
@@ -60,8 +51,7 @@ export async function PUT(request: NextRequest) {
     await db.update(settings).set(updateData).where(eq(settings.id, "singleton"))
 
     const rows = await db.select().from(settings).where(eq(settings.id, "singleton"))
-    const configs = await db.select().from(githubConfigs)
-    return NextResponse.json(toClientSettings(rows[0], configs))
+    return NextResponse.json(toClientSettings(rows[0]))
   } catch (error) {
     console.error("PUT /api/settings error:", error)
     return NextResponse.json({ error: "保存设置失败" }, { status: 500 })

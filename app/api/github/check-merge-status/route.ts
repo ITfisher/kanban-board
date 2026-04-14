@@ -1,12 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getGitHubConfig, buildRepoApiUrl, toRepoSlug, githubHeaders } from "@/lib/github-utils"
+import { buildRepositoryApiUrl, getGitHubConnection, githubHeaders, resolveRepositoryTarget } from "@/lib/github-utils"
 
 interface CheckMergeStatusBody {
-  serviceName: string
+  repositoryId?: string
+  repoDomain?: string
+  repoOwner?: string
+  repoName?: string
   pullRequestUrl?: string
   headBranch?: string
   baseBranches?: string[]
-  configId?: string
+  connectionId?: string
 }
 
 interface PullRequestListItem {
@@ -38,18 +41,26 @@ function extractPRNumber(url: string): string | null {
 export async function POST(request: NextRequest) {
   try {
     const body: CheckMergeStatusBody = await request.json()
-    const { serviceName, pullRequestUrl, headBranch, baseBranches, configId } = body
+    const { pullRequestUrl, headBranch, baseBranches, connectionId } = body
+    const target = await resolveRepositoryTarget(body)
+
+    if (!target) {
+      return NextResponse.json(
+        { error: "缺少显式仓库信息，请传 repositoryId 或 repoDomain/repoOwner/repoName" },
+        { status: 400 }
+      )
+    }
 
     if (pullRequestUrl) {
       const prNumber = extractPRNumber(pullRequestUrl)
       if (!prNumber) {
         return NextResponse.json({ error: "无效的Pull Request URL格式" }, { status: 400 })
       }
-      return checkSinglePR(serviceName, prNumber, configId)
+      return checkSinglePR(target, prNumber, connectionId)
     }
 
     if (headBranch && baseBranches) {
-      return checkBranchMergeStatus(serviceName, headBranch, baseBranches, configId)
+      return checkBranchMergeStatus(target, headBranch, baseBranches, connectionId)
     }
 
     return NextResponse.json({ error: "请提供pullRequestUrl或headBranch+baseBranches参数" }, { status: 400 })
@@ -62,13 +73,24 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function checkSinglePR(serviceName: string, prNumber: string, configId?: string) {
-  const config = await getGitHubConfig(configId)
-  if (!config) return NextResponse.json({ error: "GitHub配置未找到或Token未设置" }, { status: 400 })
+async function checkSinglePR(
+  target: Awaited<ReturnType<typeof resolveRepositoryTarget>>,
+  prNumber: string,
+  connectionId?: string
+) {
+  if (!target) {
+    return NextResponse.json({ error: "仓库不存在" }, { status: 404 })
+  }
 
-  const repo = toRepoSlug(serviceName)
-  const response = await fetch(`${buildRepoApiUrl(config, repo)}/pulls/${prNumber}`, {
-    headers: githubHeaders(config.token),
+  const connection = await getGitHubConnection({
+    connectionId,
+    repositoryId: target.repositoryId,
+    preferredDomain: target.domain,
+  })
+  if (!connection) return NextResponse.json({ error: "SCM 连接未找到或 Token 未设置" }, { status: 400 })
+
+  const response = await fetch(`${buildRepositoryApiUrl(connection, target)}/pulls/${prNumber}`, {
+    headers: githubHeaders(connection.token),
     signal: AbortSignal.timeout(10000),
   })
 
@@ -90,27 +112,34 @@ async function checkSinglePR(serviceName: string, prNumber: string, configId?: s
     headBranch: pr.head.ref,
     title: pr.title,
     url: pr.html_url,
-    _config: { name: config.name, owner: config.owner, domain: config.domain },
+    _connection: { name: connection.name, owner: target.owner, domain: target.domain, repo: target.repo },
   })
 }
 
 async function checkBranchMergeStatus(
-  serviceName: string,
+  target: Awaited<ReturnType<typeof resolveRepositoryTarget>>,
   headBranch: string,
   baseBranches: string[],
-  configId?: string
+  connectionId?: string
 ) {
-  const config = await getGitHubConfig(configId)
-  if (!config) return NextResponse.json({ error: "GitHub配置未找到或Token未设置" }, { status: 400 })
+  if (!target) {
+    return NextResponse.json({ error: "仓库不存在" }, { status: 404 })
+  }
 
-  const repo = toRepoSlug(serviceName)
-  const baseApiUrl = buildRepoApiUrl(config, repo)
-  const headers = githubHeaders(config.token)
+  const connection = await getGitHubConnection({
+    connectionId,
+    repositoryId: target.repositoryId,
+    preferredDomain: target.domain,
+  })
+  if (!connection) return NextResponse.json({ error: "SCM 连接未找到或 Token 未设置" }, { status: 400 })
+
+  const baseApiUrl = buildRepositoryApiUrl(connection, target)
+  const headers = githubHeaders(connection.token)
 
   const branchStatuses = await Promise.all(
     baseBranches.map(async (baseBranch) => {
       try {
-        const pullsUrl = `${baseApiUrl}/pulls?head=${config.owner}:${headBranch}&base=${baseBranch}&state=all&sort=updated&direction=desc`
+        const pullsUrl = `${baseApiUrl}/pulls?head=${connection.owner}:${headBranch}&base=${baseBranch}&state=all&sort=updated&direction=desc`
         const pullsResponse = await fetch(pullsUrl, { headers, signal: AbortSignal.timeout(10000) })
 
         if (!pullsResponse.ok) throw new Error(`获取PR列表失败: ${pullsResponse.status}`)
@@ -179,9 +208,9 @@ async function checkBranchMergeStatus(
   )
 
   return NextResponse.json({
-    serviceName,
+    repository: target,
     headBranch,
     branchStatuses,
-    _config: { name: config.name, owner: config.owner, domain: config.domain, repo },
+    _connection: { name: connection.name, owner: target.owner, domain: target.domain, repo: target.repo },
   })
 }

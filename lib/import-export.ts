@@ -1,4 +1,4 @@
-import type { BackupData, Service, ServiceBranch, SettingsData, Task, TaskPriority, TaskStatus } from "@/lib/types"
+import type { BackupData, Service, SettingsData, Task, TaskPriority, TaskStatus } from "@/lib/types"
 
 const TASK_STATUSES: TaskStatus[] = ["backlog", "todo", "in-progress", "testing", "done", "closed"]
 const TASK_PRIORITIES: TaskPriority[] = ["low", "medium", "high"]
@@ -13,22 +13,6 @@ function isTaskStatus(value: unknown): value is TaskStatus {
 
 function isTaskPriority(value: unknown): value is TaskPriority {
   return typeof value === "string" && TASK_PRIORITIES.includes(value as TaskPriority)
-}
-
-function validateServiceBranch(branch: unknown, index: number): branch is ServiceBranch {
-  if (!isRecord(branch)) {
-    throw new Error(`第 ${index + 1} 个服务分支格式不正确`)
-  }
-
-  if (typeof branch.serviceId !== "string" || !branch.serviceId.trim()) {
-    throw new Error(`第 ${index + 1} 个服务分支缺少有效的 serviceId`)
-  }
-
-  if (typeof branch.branchName !== "string" || !branch.branchName.trim()) {
-    throw new Error(`第 ${index + 1} 个服务分支缺少有效的分支名称`)
-  }
-
-  return true
 }
 
 export function validateTaskList(input: unknown): Task[] {
@@ -53,14 +37,8 @@ export function validateTaskList(input: unknown): Task[] {
       throw new Error(`第 ${index + 1} 个任务的优先级无效`)
     }
 
-    if (task.serviceBranches !== undefined) {
-      if (!Array.isArray(task.serviceBranches)) {
-        throw new Error(`第 ${index + 1} 个任务的服务分支必须是数组`)
-      }
-
-      task.serviceBranches.forEach((branch, branchIndex) => {
-        validateServiceBranch(branch, branchIndex)
-      })
+    if (task.taskBranches !== undefined && !Array.isArray(task.taskBranches)) {
+      throw new Error(`第 ${index + 1} 个任务的需求分支必须是数组`)
     }
 
     return task as unknown as Task

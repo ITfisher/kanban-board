@@ -1,48 +1,80 @@
 import { db } from "./db"
-import { githubConfigs } from "./schema"
+import { repositories, repositoryConnections, scmConnections } from "./schema"
+import type { RepositoryProvider } from "./types"
 
-export interface ResolvedGitHubConfig {
+export interface ResolvedScmConnection {
   id: string
   name: string
+  provider: RepositoryProvider
   domain: string
   owner: string
   token: string
   isDefault: boolean
 }
 
-/**
- * Fetch a GitHub config from the database by configId, or fall back to the
- * default / first available config, then env-var fallback.
- *
- * Tokens are NEVER returned to the client — this function is server-only.
- */
-export async function getGitHubConfig(configId?: string): Promise<ResolvedGitHubConfig | null> {
-  const allConfigs = await db.select().from(githubConfigs)
+export interface ResolvedRepositoryTarget {
+  repositoryId?: string
+  provider: RepositoryProvider
+  domain: string
+  owner: string
+  repo: string
+}
 
-  let selected = allConfigs.find((c) => c.id === configId)
+function toResolvedConnection(connection: typeof scmConnections.$inferSelect): ResolvedScmConnection {
+  return {
+    id: connection.id,
+    name: connection.name,
+    provider: connection.provider as RepositoryProvider,
+    domain: connection.domain,
+    owner: connection.owner,
+    token: connection.token,
+    isDefault: connection.isDefault === 1,
+  }
+}
+
+export async function getGitHubConnection(input: {
+  connectionId?: string
+  repositoryId?: string
+  preferredDomain?: string
+}): Promise<ResolvedScmConnection | null> {
+  const [allConnections, allRepositoryConnections] = await Promise.all([
+    db.select().from(scmConnections),
+    db.select().from(repositoryConnections),
+  ])
+
+  let selected = input.connectionId
+    ? allConnections.find((connection) => connection.id === input.connectionId)
+    : undefined
+
+  if (!selected && input.repositoryId) {
+    const mappedConnectionIds = new Set(
+      allRepositoryConnections
+        .filter((mapping) => mapping.repositoryId === input.repositoryId)
+        .map((mapping) => mapping.scmConnectionId)
+    )
+
+    selected = allConnections.find((connection) => mappedConnectionIds.has(connection.id))
+  }
+
+  if (!selected && input.preferredDomain) {
+    selected = allConnections.find((connection) => connection.domain === input.preferredDomain)
+  }
 
   if (!selected) {
-    selected = allConfigs.find((c) => c.isDefault === 1) ?? allConfigs[0]
+    selected = allConnections.find((connection) => connection.isDefault === 1) ?? allConnections[0]
   }
 
   if (selected) {
-    return {
-      id: selected.id,
-      name: selected.name,
-      domain: selected.domain,
-      owner: selected.owner,
-      token: selected.token,
-      isDefault: selected.isDefault === 1,
-    }
+    return toResolvedConnection(selected)
   }
 
-  // Env-var fallback (useful in development / CI without DB records)
   const envToken = process.env.GITHUB_TOKEN
   const envOwner = process.env.GITHUB_OWNER
   if (envToken && envOwner) {
     return {
       id: "env",
       name: "Environment",
+      provider: "github",
       domain: "github.com",
       owner: envOwner,
       token: envToken,
@@ -53,24 +85,47 @@ export async function getGitHubConfig(configId?: string): Promise<ResolvedGitHub
   return null
 }
 
-/**
- * Build the GitHub REST API base URL for a given config + repo.
- * Handles both github.com and GitHub Enterprise domains.
- */
-export function buildRepoApiUrl(config: ResolvedGitHubConfig, repo: string): string {
-  const base =
-    config.domain === "github.com"
-      ? `https://api.github.com/repos/${config.owner}/${repo}`
-      : `https://${config.domain}/api/v3/repos/${config.owner}/${repo}`
-  return base
+export async function resolveRepositoryTarget(input: {
+  repositoryId?: string
+  repoDomain?: string
+  repoOwner?: string
+  repoName?: string
+}): Promise<ResolvedRepositoryTarget | null> {
+  if (input.repositoryId) {
+    const repositoryRows = await db.select().from(repositories)
+    const repository = repositoryRows.find((row) => row.id === input.repositoryId)
+
+    if (!repository) {
+      return null
+    }
+
+    return {
+      repositoryId: repository.id,
+      provider: repository.provider as RepositoryProvider,
+      domain: repository.domain,
+      owner: repository.owner,
+      repo: repository.slug || repository.name,
+    }
+  }
+
+  if (input.repoDomain && input.repoOwner && input.repoName) {
+    return {
+      provider: input.repoDomain === "github.com" ? "github" : "github-enterprise",
+      domain: input.repoDomain,
+      owner: input.repoOwner,
+      repo: input.repoName,
+    }
+  }
+
+  return null
 }
 
-/** Normalize a service name to a GitHub repo slug. */
-export function toRepoSlug(serviceName: string): string {
-  return serviceName.toLowerCase().replace(/\s+/g, "-")
+export function buildRepositoryApiUrl(_connection: ResolvedScmConnection, target: ResolvedRepositoryTarget): string {
+  return target.domain === "github.com"
+    ? `https://api.github.com/repos/${target.owner}/${target.repo}`
+    : `https://${target.domain}/api/v3/repos/${target.owner}/${target.repo}`
 }
 
-/** Standard headers for GitHub API calls. */
 export function githubHeaders(token: string): HeadersInit {
   return {
     Authorization: `Bearer ${token}`,
@@ -79,10 +134,6 @@ export function githubHeaders(token: string): HeadersInit {
   }
 }
 
-/**
- * Parse a domain from a repository URL (HTTP or git@ format).
- * Returns null if parsing fails.
- */
 export function extractDomainFromRepository(repository?: string): string | null {
   if (!repository) return null
   if (repository.startsWith("http://") || repository.startsWith("https://")) {
@@ -92,6 +143,7 @@ export function extractDomainFromRepository(repository?: string): string | null 
       return null
     }
   }
+
   const match = repository.match(/(?:git@|https?:\/\/)?([^/:]+)[:/]/)
   return match ? match[1] : null
 }

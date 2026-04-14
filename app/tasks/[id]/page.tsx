@@ -1,1137 +1,684 @@
 "use client"
 
-import { useCallback, useState, useEffect, useRef } from "react"
-import { useTheme } from "next-themes"
+import Link from "next/link"
+import { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
-import { buildTaskBranchName } from "@/lib/branch-name"
-import { DEFAULT_SETTINGS } from "@/lib/default-settings"
-import { buildSmartCheckoutCommand } from "@/lib/git-commands"
-import { resolveServiceFromBranch } from "@/lib/service-branch-utils"
 import { TASK_STATUS_LABELS } from "@/lib/task-status"
-import type { BranchStatus, Service, ServiceBranch, SettingsData, Task } from "@/lib/types"
-import MDEditor from "@uiw/react-md-editor"
-import "@uiw/react-md-editor/markdown-editor.css"
+import type { TaskPriority, TaskStatus, User as UserOption } from "@/lib/types"
 import {
-  Edit,
-  Save,
-  X,
-  User,
-  Calendar,
-  GitBranch,
-  Plus,
-  Trash2,
+  ArrowLeft,
   ExternalLink,
+  GitBranch,
   Loader2,
-  RefreshCw,
+  PencilLine,
+  Save,
+  Server,
+  User,
+  X,
 } from "lucide-react"
 
-type Settings = Pick<SettingsData, "githubConfigs" | "branchPrefix" | "darkMode">
+type TaskDeveloper = {
+  id: string
+  name: string
+}
 
-const mergeBranchIntoTask = (targetTask: Task, updatedBranch: ServiceBranch): Task => ({
-  ...targetTask,
-  serviceBranches: targetTask.serviceBranches?.map((branch) =>
-    branch.id === updatedBranch.id ? { ...branch, ...updatedBranch } : branch
-  ),
-})
+type TaskBranchSnapshot = {
+  id: string
+  serviceId: string
+  serviceStageId: string
+  stageStatus: "idle" | "ready" | "in_progress" | "blocked" | "merged" | "closed"
+  gateStatus: "unknown" | "pending" | "ready" | "blocked" | "merged"
+  latestPullRequestUrl?: string
+}
+
+type TaskBranchPullRequest = {
+  id: string
+  serviceId: string
+  serviceStageId: string
+  htmlUrl?: string
+}
+
+type TaskBranchService = {
+  id: string
+  name: string
+  stages?: Array<{
+    id: string
+    name: string
+    position: number
+    isActive: boolean
+  }>
+}
+
+type TaskBranchView = {
+  id: string
+  name: string
+  title?: string
+  status: string
+  repositoryId: string
+  repository?: {
+    id: string
+    fullName: string
+  }
+  services: TaskBranchService[]
+  developers: TaskDeveloper[]
+  snapshots: TaskBranchSnapshot[]
+  pullRequests: TaskBranchPullRequest[]
+  lastSyncedAt?: string
+}
+
+type TaskDetailResponse = {
+  id: string
+  title: string
+  description: string
+  status: TaskStatus
+  priority: TaskPriority
+  ownerUserId?: string
+  assignee?: {
+    name: string
+    avatar?: string
+  }
+  createdAt?: string
+  updatedAt?: string
+  completedAt?: string
+  taskBranches: TaskBranchView[]
+}
+
+type EditableTask = {
+  title: string
+  description: string
+  status: TaskStatus
+  priority: TaskPriority
+  ownerUserId?: string
+}
+
+const priorityLabels: Record<TaskPriority, string> = {
+  high: "高优先级",
+  medium: "中优先级",
+  low: "低优先级",
+}
+
+const priorityBadgeClass: Record<TaskPriority, string> = {
+  high: "bg-red-100 text-red-700 border-red-200",
+  medium: "bg-amber-100 text-amber-700 border-amber-200",
+  low: "bg-emerald-100 text-emerald-700 border-emerald-200",
+}
+
+const branchStatusLabels: Record<string, string> = {
+  active: "活跃",
+  merged: "已合并",
+  closed: "已关闭",
+  archived: "已归档",
+}
+
+const stageStatusLabels: Record<TaskBranchSnapshot["stageStatus"], string> = {
+  idle: "未开始",
+  ready: "待提单",
+  in_progress: "进行中",
+  blocked: "阻塞",
+  merged: "已合并",
+  closed: "已关闭",
+}
+
+const gateStatusLabels: Record<TaskBranchSnapshot["gateStatus"], string> = {
+  unknown: "未知",
+  pending: "待满足",
+  ready: "可推进",
+  blocked: "阻塞",
+  merged: "已完成",
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "-"
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString()
+}
+
+function getStageBadgeClass(status: TaskBranchSnapshot["stageStatus"]) {
+  switch (status) {
+    case "merged":
+      return "bg-emerald-100 text-emerald-700 border-emerald-200"
+    case "in_progress":
+      return "bg-blue-100 text-blue-700 border-blue-200"
+    case "ready":
+      return "bg-violet-100 text-violet-700 border-violet-200"
+    case "blocked":
+      return "bg-red-100 text-red-700 border-red-200"
+    case "closed":
+      return "bg-zinc-100 text-zinc-700 border-zinc-200"
+    default:
+      return "bg-muted text-muted-foreground border-border"
+  }
+}
+
+function getGateBadgeClass(status: TaskBranchSnapshot["gateStatus"]) {
+  switch (status) {
+    case "merged":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200"
+    case "ready":
+      return "bg-blue-50 text-blue-700 border-blue-200"
+    case "blocked":
+      return "bg-red-50 text-red-700 border-red-200"
+    case "pending":
+      return "bg-amber-50 text-amber-700 border-amber-200"
+    default:
+      return "bg-muted text-muted-foreground border-border"
+  }
+}
+
+function getTaskStatusBadgeClass(status: TaskStatus) {
+  switch (status) {
+    case "done":
+    case "closed":
+      return "bg-emerald-100 text-emerald-700 border-emerald-200"
+    case "testing":
+      return "bg-violet-100 text-violet-700 border-violet-200"
+    case "in-progress":
+      return "bg-blue-100 text-blue-700 border-blue-200"
+    case "todo":
+      return "bg-amber-100 text-amber-700 border-amber-200"
+    default:
+      return "bg-muted text-muted-foreground border-border"
+  }
+}
 
 export default function TaskDetailPage() {
   const params = useParams()
   const router = useRouter()
   const taskId = params.id as string
 
-  const [task, setTask] = useState<Task | null>(null)
-  const [services, setServices] = useState<Service[]>([])
-  const [settings, setSettings] = useState<Settings>({
-    githubConfigs: [],
-    branchPrefix: DEFAULT_SETTINGS.branchPrefix,
-    darkMode: DEFAULT_SETTINGS.darkMode,
-  })
+  const [task, setTask] = useState<TaskDetailResponse | null>(null)
+  const [form, setForm] = useState<EditableTask | null>(null)
+  const [users, setUsers] = useState<UserOption[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [editedTask, setEditedTask] = useState<Task | null>(null)
-  const [mergingBranches, setMergingBranches] = useState<Set<string>>(new Set())
-  const [checkingBranches, setCheckingBranches] = useState<Set<string>>(new Set())
-  const { resolvedTheme } = useTheme()
 
-  const pollingAbortRef = useRef<AbortController | null>(null)
-
-  // Load task, services, settings on mount
   useEffect(() => {
-    const load = async () => {
+    const loadTask = async () => {
       setLoading(true)
       try {
-        const [taskRes, servicesRes, settingsRes] = await Promise.all([
-          fetch(`/api/tasks/${taskId}`),
-          fetch("/api/services"),
-          fetch("/api/settings"),
+        const [taskResponse, usersResponse] = await Promise.all([
+          fetch(`/api/tasks/${taskId}`, { cache: "no-store" }),
+          fetch("/api/users", { cache: "no-store" }),
         ])
-
-        if (taskRes.ok) {
-          const taskData = await taskRes.json()
-          setTask(taskData)
-          setEditedTask({ ...taskData })
+        if (!taskResponse.ok) {
+          throw new Error(taskResponse.status === 404 ? "任务不存在" : "加载任务失败")
         }
 
-        if (servicesRes.ok) {
-          const servicesData = await servicesRes.json()
-          setServices(servicesData)
+        const data: TaskDetailResponse = await taskResponse.json()
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json()
+          setUsers(Array.isArray(usersData) ? usersData : [])
+        } else {
+          setUsers([])
+          toast({
+            title: "用户列表加载失败",
+            description: `负责人选择暂不可用（${usersResponse.status}）`,
+            variant: "destructive",
+          })
         }
-
-        if (settingsRes.ok) {
-          const settingsData = await settingsRes.json()
-          setSettings(settingsData)
-        }
+        setTask(data)
+        setForm({
+          title: data.title,
+          description: data.description,
+          status: data.status,
+          priority: data.priority,
+          ownerUserId: data.ownerUserId,
+        })
       } catch (error) {
-        console.error("Failed to load data:", error)
+        toast({
+          title: "加载任务失败",
+          description: error instanceof Error ? error.message : "无法获取任务详情",
+          variant: "destructive",
+        })
       } finally {
         setLoading(false)
       }
     }
 
-    load()
+    void loadTask()
   }, [taskId])
 
-  // Keep editedTask in sync when task updates from server (but not while editing)
-  useEffect(() => {
-    if (task && !isEditing) {
-      setEditedTask({ ...task })
+  const summary = useMemo(() => {
+    const branches = task?.taskBranches ?? []
+    const serviceIds = new Set(branches.flatMap((branch) => branch.services.map((service) => service.id)))
+    const prCount = branches.reduce((total, branch) => total + branch.pullRequests.length, 0)
+
+    return {
+      branchCount: branches.length,
+      serviceCount: serviceIds.size,
+      prCount,
     }
-  }, [task, isEditing])
-
-  const updateBranchState = useCallback(async (
-    branchId: string,
-    updates: Record<string, unknown>,
-    signal?: AbortSignal
-  ) => {
-    const response = await fetch(`/api/tasks/${taskId}/branches/${branchId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
-      signal,
-    })
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => null)
-      throw new Error(error?.error || "更新服务分支失败")
-    }
-
-    const updatedBranch: ServiceBranch = await response.json()
-
-    setTask((prev) => (prev ? mergeBranchIntoTask(prev, updatedBranch) : prev))
-    if (!isEditing) {
-      setEditedTask((prev) => (prev ? mergeBranchIntoTask(prev, updatedBranch) : prev))
-    }
-
-    return updatedBranch
-  }, [isEditing, taskId])
-
-  const getServiceForBranch = useCallback(
-    (branch: Pick<ServiceBranch, "serviceId">) => resolveServiceFromBranch(services, branch),
-    [services]
-  )
-
-  // PR polling with abort controller to fix race condition
-  useEffect(() => {
-    const defaultConfigId =
-      settings.githubConfigs?.find((c) => c.isDefault)?.id ??
-      settings.githubConfigs?.[0]?.id
-
-    const checkPRStatus = async () => {
-      // Abort any in-flight request
-      pollingAbortRef.current?.abort()
-      const controller = new AbortController()
-      pollingAbortRef.current = controller
-
-      try {
-        // Re-fetch task to get latest branches
-        const taskRes = await fetch(`/api/tasks/${taskId}`, { signal: controller.signal })
-        if (!taskRes.ok) return
-        const currentTask: Task = await taskRes.json()
-
-        if (!currentTask.serviceBranches) return
-
-        const branchesWithPR = currentTask.serviceBranches.filter(
-          (branch) => branch.pullRequestUrl && !branch.mergedToTest && !branch.mergedToMaster
-        )
-
-        if (branchesWithPR.length === 0) return
-
-        for (const branch of branchesWithPR) {
-          if (controller.signal.aborted) return
-
-          try {
-            setCheckingBranches((prev) => new Set(prev).add(branch.id))
-            const service = getServiceForBranch(branch)
-
-            const response = await fetch("/api/github/pr-status", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                serviceName: service?.name ?? branch.serviceName,
-                pullRequestUrl: branch.pullRequestUrl,
-                configId: defaultConfigId,
-              }),
-              signal: controller.signal,
-            })
-
-            if (response.ok) {
-              const prStatus = await response.json()
-              const testBranch = service?.testBranch
-              const masterBranch = service?.masterBranch
-
-              await updateBranchState(
-                branch.id,
-                {
-                  prStatus,
-                  lastStatusCheck: new Date().toISOString(),
-                  mergedToTest:
-                    prStatus.merged && testBranch && prStatus.base_ref === testBranch
-                      ? true
-                      : branch.mergedToTest,
-                  mergedToMaster:
-                    prStatus.merged &&
-                    masterBranch &&
-                    prStatus.base_ref === masterBranch
-                      ? true
-                      : branch.mergedToMaster,
-                },
-                controller.signal
-              )
-            }
-          } catch (err) {
-            if (err instanceof Error && err.name === "AbortError") return
-            console.error("PR status check failed:", err)
-          } finally {
-            setCheckingBranches((prev) => {
-              const newSet = new Set(prev)
-              newSet.delete(branch.id)
-              return newSet
-            })
-          }
-        }
-
-      } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") return
-        console.error("PR status check failed:", err)
-      }
-    }
-
-    if (!loading && taskId) {
-      checkPRStatus()
-      const interval = setInterval(checkPRStatus, 30000)
-      return () => {
-        clearInterval(interval)
-        pollingAbortRef.current?.abort()
-      }
-    }
-  }, [loading, settings.githubConfigs, taskId, isEditing, services, updateBranchState, getServiceForBranch])
-
-  const getDefaultConfigId = () =>
-    settings.githubConfigs?.find((c) => c.isDefault)?.id ??
-    settings.githubConfigs?.[0]?.id
-
-  const buildDefaultBranchName = (label: string) =>
-    buildTaskBranchName(settings.branchPrefix, label, Date.now())
-
-  const saveTaskFields = async (nextTask: Task) => {
-    const { serviceBranches: _ignored, ...taskFields } = nextTask
-    void _ignored
-
-    const response = await fetch(`/api/tasks/${taskId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...taskFields, updatedAt: new Date().toISOString() }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => null)
-      throw new Error(error?.error || "保存任务信息失败")
-    }
-
-    return response.json() as Promise<Task>
-  }
-
-  const saveTaskBranches = async (branches: ServiceBranch[]) => {
-    const response = await fetch(`/api/tasks/${taskId}/branches`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ serviceBranches: branches }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => null)
-      throw new Error(error?.error || "保存任务分支失败")
-    }
-
-    return response.json() as Promise<ServiceBranch[]>
-  }
-
-  const createPullRequest = async (
-    serviceName: string,
-    title: string,
-    head: string,
-    base: string,
-    body?: string
-  ) => {
-    const response = await fetch("/api/github/pull-request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        serviceName,
-        title,
-        head,
-        base,
-        body,
-        configId: getDefaultConfigId(),
-      }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || "Failed to create pull request")
-    }
-
-    return response.json()
-  }
+  }, [task])
 
   const handleSave = async () => {
-    if (!editedTask) return
+    if (!form) return
 
+    setSaving(true)
     try {
-      await saveTaskFields(editedTask)
-      await saveTaskBranches(editedTask.serviceBranches ?? [])
-
-      const refreshedRes = await fetch(`/api/tasks/${taskId}`)
-      if (!refreshedRes.ok) {
-        throw new Error("刷新任务数据失败")
-      }
-
-      const saved = await refreshedRes.json()
-      setTask(saved)
-      setEditedTask({ ...saved })
-      setIsEditing(false)
-      toast({
-        title: "任务更新成功",
-        description: `任务 "${saved.title}" 已更新`,
-      })
-    } catch (error) {
-      console.error("Failed to save task:", error)
-      toast({
-        title: "❌ 保存失败",
-        description: error instanceof Error ? error.message : "未知错误",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleCancel = () => {
-    setEditedTask(task ? { ...task } : null)
-    setIsEditing(false)
-  }
-
-  const handleAddServiceBranch = () => {
-    if (!editedTask) return
-
-    const defaultService = services[0]
-
-    const newBranch: ServiceBranch = {
-      id: Date.now().toString(),
-      serviceId: defaultService?.id,
-      serviceName: defaultService?.name || "",
-      branchName: buildDefaultBranchName(editedTask.title),
-      createdAt: new Date().toISOString(),
-    }
-
-    setEditedTask({
-      ...editedTask,
-      serviceBranches: [...(editedTask.serviceBranches || []), newBranch],
-    })
-  }
-
-  const handleUpdateServiceBranch = (branchId: string, updates: Partial<ServiceBranch>) => {
-    if (!editedTask) return
-
-    setEditedTask({
-      ...editedTask,
-      serviceBranches: editedTask.serviceBranches?.map((branch) =>
-        branch.id === branchId ? { ...branch, ...updates } : branch
-      ),
-    })
-  }
-
-  const handleDeleteServiceBranch = (branchId: string) => {
-    if (!editedTask) return
-
-    setEditedTask({
-      ...editedTask,
-      serviceBranches: editedTask.serviceBranches?.filter((branch) => branch.id !== branchId),
-    })
-  }
-
-  const handleCopyGitCommand = (branch: Pick<ServiceBranch, "branchName" | "serviceId" | "serviceName">) => {
-    const service = getServiceForBranch(branch)
-    if (!service) {
-      toast({
-        title: "❌ 服务配置不存在",
-        description: `找不到服务 "${branch.serviceName}" 的配置，请先在服务管理中添加该服务配置。`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!service.masterBranch) {
-      toast({
-        title: "❌ 主分支配置缺失",
-        description: `服务 "${branch.serviceName}" 未配置主分支，请在服务管理中设置主分支名称。`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    const command = buildSmartCheckoutCommand(branch.branchName, service.masterBranch)
-
-    navigator.clipboard.writeText(command)
-    toast({
-      title: "已复制Git命令到剪贴板",
-      description: `智能分支切换：本地存在→切换，远程存在→检出，都不存在→创建并推送`,
-    })
-  }
-
-  const handleMergeToTest = async (branchId: string) => {
-    if (!editedTask) return
-
-    const branch = editedTask.serviceBranches?.find((b) => b.id === branchId)
-    if (!branch) return
-
-    const service = getServiceForBranch(branch)
-    if (!service) {
-      toast({
-        title: "❌ 服务配置不存在",
-        description: `找不到服务 "${branch.serviceName}" 的配置，请先在服务管理中添加该服务配置。`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!service.testBranch) {
-      toast({
-        title: "❌ 测试分支配置缺失",
-        description: `服务 "${branch.serviceName}" 未配置测试分支，请在服务管理中设置测试分支名称。`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    const testBranch = service.testBranch
-
-    setMergingBranches((prev) => new Set(prev).add(branchId))
-
-    try {
-      const pullRequest = await createPullRequest(
-        service.name,
-        `[TEST][${editedTask.title}] Merge to Test Branch`,
-        branch.branchName,
-        testBranch,
-        `🔄 **合并到测试分支 Pull Request**\n\n**任务**: ${editedTask.title}\n**描述**: ${editedTask.description}\n**分支**: ${branch.branchName}\n**目标**: 测试分支 (${testBranch})\n\n⚠️ **注意**: 此PR用于将功能分支合并到测试分支，不会影响线上环境。\n\n请审核代码质量和功能完整性后合并到测试分支进行验证。`
-      )
-
-      await updateBranchState(branchId, {
-        mergedToTest: false,
-        testMergeDate: null,
-        testPullRequestUrl: pullRequest.html_url,
-        pullRequestUrl: pullRequest.html_url,
-      })
-
-      toast({
-        title: "✅ 测试分支合并 PR 创建成功",
-        description: `已创建合并到测试分支的 Pull Request: #${pullRequest.number}`,
-      })
-    } catch (error) {
-      console.error("Failed to create pull request:", error)
-      toast({
-        title: "❌ 创建测试分支合并 PR 失败",
-        description: error instanceof Error ? error.message : "未知错误",
-        variant: "destructive",
-      })
-    } finally {
-      setMergingBranches((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(branchId)
-        return newSet
-      })
-    }
-  }
-
-  const handleMergeToMaster = async (branchId: string) => {
-    if (!editedTask) return
-
-    const branch = editedTask.serviceBranches?.find((b) => b.id === branchId)
-    if (!branch) return
-
-    const service = getServiceForBranch(branch)
-    if (!service) {
-      toast({
-        title: "❌ 服务配置不存在",
-        description: `找不到服务 "${branch.serviceName}" 的配置，请先在服务管理中添加该服务配置。`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!service.masterBranch) {
-      toast({
-        title: "❌ 主分支配置缺失",
-        description: `服务 "${branch.serviceName}" 未配置主分支，请在服务管理中设置主分支名称。`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    const masterBranch = service.masterBranch
-
-    setMergingBranches((prev) => new Set(prev).add(branchId))
-
-    try {
-      const pullRequest = await createPullRequest(
-        service.name,
-        `[PROD][${editedTask.title}] Merge to Master Branch`,
-        branch.branchName,
-        masterBranch,
-        `🚀 **合并到主分支 Pull Request**\n\n**任务**: ${editedTask.title}\n**描述**: ${editedTask.description}\n**分支**: ${branch.branchName}\n**目标**: 主分支 (${masterBranch})\n\n✅ **状态**: ${branch.mergedToTest ? "已通过测试分支验证" : "⚠️ 未验证测试分支"}\n\n🔒 **合并要求**:\n- 代码已在测试分支充分验证\n- 功能测试通过\n- 性能测试通过\n- 安全审查通过\n\n⚠️ **重要**: 此为主分支合并，请仔细审核后合并。`
-      )
-
-      await updateBranchState(branchId, {
-        mergedToMaster: false,
-        masterMergeDate: null,
-        masterPullRequestUrl: pullRequest.html_url,
-        pullRequestUrl: pullRequest.html_url,
-      })
-
-      toast({
-        title: "🚀 主分支合并 PR 创建成功",
-        description: `已创建合并到主分支的 Pull Request: #${pullRequest.number}`,
-      })
-    } catch (error) {
-      console.error("Failed to create pull request:", error)
-      toast({
-        title: "❌ 创建主分支合并 PR 失败",
-        description: error instanceof Error ? error.message : "未知错误",
-        variant: "destructive",
-      })
-    } finally {
-      setMergingBranches((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(branchId)
-        return newSet
-      })
-    }
-  }
-
-  const handleRefreshBranchStatus = async (branchId: string) => {
-    if (!editedTask) return
-
-    const branch = editedTask.serviceBranches?.find((b) => b.id === branchId)
-    if (!branch) return
-
-    const service = getServiceForBranch(branch)
-    if (!service) {
-      toast({
-        title: "❌ 服务配置不存在",
-        description: `找不到服务 "${branch.serviceName}" 的配置，请先在服务管理中添加该服务配置。`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    setCheckingBranches((prev) => new Set(prev).add(branchId))
-
-    try {
-      const baseBranches = []
-      if (service.testBranch) baseBranches.push(service.testBranch)
-      if (service.masterBranch) baseBranches.push(service.masterBranch)
-
-      if (baseBranches.length === 0) {
-        toast({
-          title: "❌ 分支配置缺失",
-          description: `服务 "${branch.serviceName}" 未配置测试分支或主分支，请在服务管理中设置分支名称。`,
-          variant: "destructive",
-        })
-        return
-      }
-
-      const response = await fetch("/api/github/check-merge-status", {
-        method: "POST",
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          serviceName: service.name,
-          headBranch: branch.branchName,
-          baseBranches,
-          configId: getDefaultConfigId(),
+          title: form.title,
+          description: form.description,
+          status: form.status,
+          priority: form.priority,
+          ownerUserId: form.ownerUserId ?? null,
         }),
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "检查分支状态失败")
+        const error = await response.json().catch(() => null)
+        throw new Error(error?.error || "保存任务失败")
       }
 
-      const result = await response.json()
-      const branchStatuses = result.branchStatuses || []
-
-      const updates: Partial<ServiceBranch> = {
-        lastStatusCheck: new Date().toISOString(),
-        diffStatus: {},
-      }
-
-      const testStatus = branchStatuses.find((s: BranchStatus) => s.baseBranch === service.testBranch)
-      if (testStatus) {
-        if (testStatus.pullRequest) {
-          updates.testPullRequestUrl = testStatus.pullRequest.url
-          updates.pullRequestUrl = testStatus.pullRequest.url
-          updates.mergedToTest = testStatus.pullRequest.merged
-          if (testStatus.pullRequest.merged && testStatus.pullRequest.mergedAt) {
-            updates.testMergeDate = testStatus.pullRequest.mergedAt
-          }
-        } else if (testStatus.isMerged) {
-          updates.mergedToTest = true
-        }
-        if (testStatus.diffStatus) {
-          updates.diffStatus!.test = {
-            status: testStatus.diffStatus.status,
-            aheadBy: testStatus.diffStatus.aheadBy,
-            behindBy: testStatus.diffStatus.behindBy,
-            totalCommits: testStatus.diffStatus.totalCommits,
-          }
-        }
-      }
-
-      const masterStatus = branchStatuses.find(
-        (s: BranchStatus) => s.baseBranch === service.masterBranch
-      )
-      if (masterStatus) {
-        if (masterStatus.pullRequest) {
-          updates.masterPullRequestUrl = masterStatus.pullRequest.url
-          if (!updates.pullRequestUrl) {
-            updates.pullRequestUrl = masterStatus.pullRequest.url
-          }
-          updates.mergedToMaster = masterStatus.pullRequest.merged
-          if (masterStatus.pullRequest.merged && masterStatus.pullRequest.mergedAt) {
-            updates.masterMergeDate = masterStatus.pullRequest.mergedAt
-          }
-        } else if (masterStatus.isMerged) {
-          updates.mergedToMaster = true
-        }
-        if (masterStatus.diffStatus) {
-          updates.diffStatus!.master = {
-            status: masterStatus.diffStatus.status,
-            aheadBy: masterStatus.diffStatus.aheadBy,
-            behindBy: masterStatus.diffStatus.behindBy,
-            totalCommits: masterStatus.diffStatus.totalCommits,
-          }
-        }
-      }
-
-      await updateBranchState(branchId, updates)
-
-      const statusMessages = []
-      if (testStatus?.pullRequest) {
-        statusMessages.push(`测试分支: ${testStatus.pullRequest.merged ? "✅已合并" : "⏳待合并"}`)
-      }
-      if (masterStatus?.pullRequest) {
-        statusMessages.push(`主分支: ${masterStatus.pullRequest.merged ? "✅已合并" : "⏳待合并"}`)
-      }
-
-      toast({
-        title: "🔄 状态刷新成功",
-        description: statusMessages.length > 0 ? statusMessages.join(", ") : "已更新分支状态",
+      const updated: TaskDetailResponse = await response.json()
+      setTask(updated)
+      setForm({
+        title: updated.title,
+        description: updated.description,
+        status: updated.status,
+        priority: updated.priority,
+        ownerUserId: updated.ownerUserId,
       })
+      setIsEditing(false)
+      toast({ title: "任务已保存", description: "基础信息已更新，需求分支聚合视图已刷新。" })
     } catch (error) {
-      console.error("Failed to refresh branch status:", error)
       toast({
-        title: "❌ 状态刷新失败",
+        title: "保存失败",
         description: error instanceof Error ? error.message : "未知错误",
         variant: "destructive",
       })
     } finally {
-      setCheckingBranches((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(branchId)
-        return newSet
-      })
+      setSaving(false)
     }
   }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-100 text-red-800"
-      case "medium":
-        return "bg-yellow-100 text-yellow-800"
-      case "low":
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "backlog":
-        return "bg-gray-100 text-gray-800"
-      case "todo":
-        return "bg-blue-100 text-blue-800"
-      case "in-progress":
-        return "bg-yellow-100 text-yellow-800"
-      case "testing":
-        return "bg-purple-100 text-purple-800"
-      case "done":
-        return "bg-green-100 text-green-800"
-      case "closed":
-        return "bg-zinc-200 text-zinc-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  const statusLabels = TASK_STATUS_LABELS
-
-  const priorityLabels = {
-    high: "高优先级",
-    medium: "中优先级",
-    low: "低优先级",
+  const handleCancel = () => {
+    if (!task) return
+    setForm({
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      ownerUserId: task.ownerUserId,
+    })
+    setIsEditing(false)
   }
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center">
-        <Loader2 className="h-8 w-8 animate-spin mb-4 text-muted-foreground" />
-        <p className="text-muted-foreground">加载中...</p>
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="text-sm">加载任务详情中...</span>
+        </div>
       </div>
     )
   }
 
-  if (!task) {
+  if (!task || !form) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center">
-        <h3 className="text-lg font-semibold mb-2">任务不存在</h3>
-        <p className="text-muted-foreground mb-4">找不到指定的任务信息</p>
-        <Button onClick={() => router.push("/tasks")}>返回任务列表</Button>
+      <div className="flex h-full items-center justify-center p-6">
+        <Card className="w-full max-w-lg">
+          <CardHeader>
+            <CardTitle>任务不存在</CardTitle>
+            <CardDescription>当前任务可能已删除，或数据尚未完成迁移。</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => router.push("/tasks")}>返回任务列表</Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
-        <header className="border-b bg-card flex-shrink-0">
-          <div className="flex items-center justify-end px-6 py-4">
-            <div className="flex items-center gap-2">
-              {isEditing ? (
-                <>
-                  <Button onClick={handleSave}>
-                    <Save className="h-4 w-4 mr-2" />
-                    保存
-                  </Button>
-                  <Button variant="outline" onClick={handleCancel}>
-                    <X className="h-4 w-4 mr-2" />
-                    取消
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={() => setIsEditing(true)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  编辑
-                </Button>
-              )}
+    <div className="flex h-full flex-col bg-background">
+      <header className="border-b bg-card">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => router.push("/tasks")}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-semibold">任务详情</h1>
+              <p className="text-sm text-muted-foreground">按需求分支聚合查看服务挂靠、开发者和阶段状态。</p>
             </div>
           </div>
-        </header>
 
-        <div className="flex-1 p-6 overflow-auto">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    {isEditing ? (
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="title">任务标题</Label>
-                          <Input
-                            id="title"
-                            value={editedTask?.title || ""}
-                            onChange={(e) =>
-                              setEditedTask(editedTask ? { ...editedTask, title: e.target.value } : null)
-                            }
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="description">
-                            任务描述
-                            <span className="text-xs text-muted-foreground ml-2">支持 Markdown 格式</span>
-                          </Label>
-                          <div className="mt-2">
-                            <MDEditor
-                              value={editedTask?.description || ""}
-                              onChange={(value) =>
-                                setEditedTask(
-                                  editedTask ? { ...editedTask, description: value || "" } : null
-                                )
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+              <>
+                <Button variant="outline" onClick={handleCancel} disabled={saving}>
+                  <X className="mr-2 h-4 w-4" />
+                  取消
+                </Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  保存
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setIsEditing(true)}>
+                <PencilLine className="mr-2 h-4 w-4" />
+                编辑任务
+              </Button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-auto">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-6">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0 flex-1 space-y-4">
+                  {isEditing ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="task-title">任务标题</Label>
+                        <Input
+                          id="task-title"
+                          value={form.title}
+                          onChange={(event) => setForm((prev) => (prev ? { ...prev, title: event.target.value } : prev))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="task-description">任务描述</Label>
+                        <Textarea
+                          id="task-description"
+                          rows={8}
+                          value={form.description}
+                          onChange={(event) => setForm((prev) => (prev ? { ...prev, description: event.target.value } : prev))}
+                          className="resize-y"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <CardTitle className="text-2xl leading-tight">{task.title}</CardTitle>
+                      <CardDescription className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground/80">
+                        {task.description || "暂无描述"}
+                      </CardDescription>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 md:w-52 md:justify-end">
+                  <Badge variant="outline" className={priorityBadgeClass[task.priority]}>
+                    {priorityLabels[task.priority]}
+                  </Badge>
+                  <Badge variant="outline" className={getTaskStatusBadgeClass(task.status)}>
+                    {TASK_STATUS_LABELS[task.status]}
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isEditing ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="task-status">状态</Label>
+                    <select
+                      id="task-status"
+                      value={form.status}
+                      onChange={(event) =>
+                        setForm((prev) => (prev ? { ...prev, status: event.target.value as TaskStatus } : prev))
+                      }
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="task-priority">优先级</Label>
+                    <select
+                      id="task-priority"
+                      value={form.priority}
+                      onChange={(event) =>
+                        setForm((prev) => (prev ? { ...prev, priority: event.target.value as TaskPriority } : prev))
+                      }
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      {Object.entries(priorityLabels).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="task-assignee">负责人</Label>
+                    <select
+                      id="task-assignee"
+                      value={form.ownerUserId ?? "unassigned"}
+                      onChange={(event) =>
+                        setForm((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                ownerUserId: event.target.value === "unassigned" ? undefined : event.target.value,
                               }
-                              height={350}
-                              data-color-mode={resolvedTheme === "dark" ? "dark" : "light"}
-                              visibleDragbar={false}
-                              preview="live"
-                              hideToolbar={false}
-                              textareaProps={{
-                                placeholder:
-                                  "请输入任务描述，支持 Markdown 格式...\n\n示例:\n# 功能需求\n- 功能点1\n- 功能点2\n\n## 技术要求\n```javascript\n// 代码示例\n```",
-                                style: {
-                                  fontSize: "14px",
-                                  lineHeight: "1.6",
-                                  fontFamily: "inherit",
-                                },
-                              }}
-                            />
+                            : prev
+                        )
+                      }
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="unassigned">未分配</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                          {user.email ? ` (${user.email})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {users.length === 0 && (
+                      <p className="text-xs text-muted-foreground">暂无可选用户，请先到用户管理中创建。</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-lg border p-4">
+                    <div className="text-xs text-muted-foreground">负责人</div>
+                    <div className="mt-2 font-medium">{task.assignee?.name || "未分配"}</div>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <div className="text-xs text-muted-foreground">创建时间</div>
+                    <div className="mt-2 font-medium">{formatDateTime(task.createdAt)}</div>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <div className="text-xs text-muted-foreground">更新时间</div>
+                    <div className="mt-2 font-medium">{formatDateTime(task.updatedAt)}</div>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <div className="text-xs text-muted-foreground">完成时间</div>
+                    <div className="mt-2 font-medium">{formatDateTime(task.completedAt)}</div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>需求分支</CardDescription>
+                <CardTitle>{summary.branchCount}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>挂靠服务</CardDescription>
+                <CardTitle>{summary.serviceCount}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>阶段 PR 记录</CardDescription>
+                <CardTitle>{summary.prCount}</CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GitBranch className="h-5 w-5" />
+                需求分支
+              </CardTitle>
+              <CardDescription>每个需求分支展示挂靠服务、开发者和阶段化流水线状态。</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {task.taskBranches.length === 0 ? (
+                <div className="rounded-lg border border-dashed px-6 py-12 text-center">
+                  <GitBranch className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+                  <h3 className="text-base font-medium">当前任务还没有需求分支</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">Task4 视图已切换到聚合模式，这里不再直接编辑旧的服务分支 JSON。</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {task.taskBranches.map((branch) => (
+                    <Card key={branch.id} className="border-dashed">
+                      <CardHeader className="pb-4">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <CardTitle className="text-lg">{branch.title || branch.name}</CardTitle>
+                              <Badge variant="outline">{branchStatusLabels[branch.status] || branch.status}</Badge>
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                              <span className="inline-flex items-center gap-1">
+                                <GitBranch className="h-3.5 w-3.5" />
+                                <span className="font-mono text-foreground">{branch.name}</span>
+                              </span>
+                              <span>{branch.repository?.fullName || branch.repositoryId}</span>
+                              <span>最近同步：{formatDateTime(branch.lastSyncedAt)}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {branch.services.map((service) => (
+                              <Button key={service.id} variant="outline" size="sm" asChild>
+                                <Link href={`/services/${service.id}`}>
+                                  <Server className="mr-1 h-3.5 w-3.5" />
+                                  {service.name}
+                                </Link>
+                              </Button>
+                            ))}
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <>
-                        <CardTitle className="text-2xl mb-2">{task.title}</CardTitle>
-                        <div className="text-base">
-                          <MDEditor.Markdown
-                            source={task.description || "暂无描述"}
-                            style={{
-                              whiteSpace: "pre-wrap",
-                              backgroundColor: "transparent",
-                              color: "inherit",
-                              fontSize: "inherit",
-                            }}
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2 ml-4">
-                    <Badge className={getPriorityColor(task.priority)}>
-                      {priorityLabels[task.priority as keyof typeof priorityLabels]}
-                    </Badge>
-                    <Badge className={getStatusColor(task.status)}>
-                      {statusLabels[task.status as keyof typeof statusLabels]}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">负责人:</span>
-                    {isEditing ? (
-                      <Input
-                        value={editedTask?.assignee?.name || ""}
-                        onChange={(e) =>
-                          setEditedTask(editedTask ? {
-                            ...editedTask,
-                            assignee: e.target.value ? { name: e.target.value } : undefined,
-                          } : null)
-                        }
-                        className="h-7 text-sm w-36"
-                        placeholder="负责人姓名"
-                      />
-                    ) : (
-                      <span className="font-medium">{task.assignee?.name || "未分配"}</span>
-                    )}
-                  </div>
-                  {task.createdAt && (
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">创建时间:</span>
-                      <span className="font-medium">{new Date(task.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                  {task.updatedAt && (
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">更新时间:</span>
-                      <span className="font-medium">{new Date(task.updatedAt).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                  {task.completedAt && (
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">完成时间:</span>
-                      <span className="font-medium">{new Date(task.completedAt).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                      </CardHeader>
 
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <GitBranch className="h-5 w-5" />
-                      服务分支
-                    </CardTitle>
-                    <CardDescription>管理与此任务关联的多个服务分支</CardDescription>
-                  </div>
-                  {isEditing && (
-                    <Button onClick={handleAddServiceBranch} size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      添加分支
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {(!task.serviceBranches || task.serviceBranches.length === 0) && !isEditing ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <GitBranch className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>暂无关联的服务分支</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {(editedTask?.serviceBranches || task.serviceBranches || []).map((branch) => (
-                      <div key={branch.id} className="border rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            {isEditing ? (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <Label>服务名称</Label>
-                                  <select
-                                    value={branch.serviceId || ""}
-                                    onChange={(e) =>
-                                      {
-                                        const selectedService = services.find(
-                                          (service) => service.id === e.target.value
-                                        )
-                                        if (!selectedService) return
-                                        handleUpdateServiceBranch(branch.id, {
-                                          serviceId: selectedService.id,
-                                          serviceName: selectedService.name,
-                                        })
-                                      }
-                                    }
-                                    className="w-full border border-border rounded-md px-3 py-2 text-sm bg-background"
-                                  >
-                                    {services.map((service) => (
-                                      <option key={service.id} value={service.id}>
-                                        {service.name}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div>
-                                  <Label>分支名称</Label>
-                                  <Input
-                                    value={branch.branchName}
-                                    onChange={(e) =>
-                                      handleUpdateServiceBranch(branch.id, {
-                                        branchName: e.target.value,
-                                      })
-                                    }
-                                  />
-                                </div>
-                                <div>
-                                  <Label>Pull Request URL</Label>
-                                  <Input
-                                    value={branch.pullRequestUrl || ""}
-                                    onChange={(e) =>
-                                      handleUpdateServiceBranch(branch.id, {
-                                        pullRequestUrl: e.target.value,
-                                      })
-                                    }
-                                    placeholder="https://github.com/..."
-                                  />
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <h4 className="font-medium">{branch.serviceName}</h4>
-                                  <a
-                                    href={`/branches?service=${encodeURIComponent(branch.serviceName)}`}
-                                    className="text-primary hover:text-primary/80 transition-colors"
-                                    title="查看服务分支"
-                                  >
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                  <button
-                                    onClick={() => handleRefreshBranchStatus(branch.id)}
-                                    disabled={checkingBranches.has(branch.id)}
-                                    className="p-1 hover:bg-muted rounded transition-colors"
-                                    title="刷新分支状态"
-                                  >
-                                    <RefreshCw
-                                      className={`h-3 w-3 text-muted-foreground ${
-                                        checkingBranches.has(branch.id) ? "animate-spin" : ""
-                                      }`}
-                                    />
-                                  </button>
-                                </div>
-                                <div className="flex items-center gap-2 mb-3">
-                                  <span className="font-mono text-sm bg-muted px-2 py-1 rounded">
-                                    {branch.branchName}
-                                  </span>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleCopyGitCommand(branch)}
-                                    className="h-7 px-2"
-                                    title="复制Git命令：若分支存在则切换，若不存在则从主分支创建"
-                                  >
-                                    <GitBranch className="h-3 w-3 mr-1" />
-                                    复制Git命令
+                      <CardContent className="space-y-5">
+                        <div className="flex flex-wrap gap-2">
+                          {branch.developers.length > 0 ? (
+                            branch.developers.map((developer) => (
+                              <Badge key={developer.id} variant="secondary" className="gap-1">
+                                <User className="h-3 w-3" />
+                                {developer.name}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-sm text-muted-foreground">暂无开发者</span>
+                          )}
+                        </div>
+
+                        <div className="space-y-3">
+                          {branch.services.map((service) => {
+                            const activeStages = [...(service.stages ?? [])]
+                              .filter((stage) => stage.isActive)
+                              .sort((left, right) => left.position - right.position)
+
+                            return (
+                              <div key={service.id} className="rounded-lg border p-4">
+                                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                  <div>
+                                    <div className="font-medium">{service.name}</div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {activeStages.length > 0
+                                        ? `${activeStages.length} 个启用阶段`
+                                        : "当前服务尚未配置启用阶段"}
+                                    </div>
+                                  </div>
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <Link href={`/services/${service.id}`}>查看服务流水线</Link>
                                   </Button>
                                 </div>
 
-                                <div className="space-y-2">
-                                  {/* 测试分支 */}
-                                  <div className="border rounded-lg p-3 bg-blue-50/50">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-blue-800">测试分支</span>
-                                        <Badge
-                                          variant="outline"
-                                          className={branch.mergedToTest
-                                            ? "bg-blue-100 text-blue-800 border-blue-300 text-xs"
-                                            : "bg-gray-100 text-gray-600 border-gray-300 text-xs"}
-                                        >
-                                          {branch.mergedToTest ? "✓ 已合并" : "✗ 未合并"}
-                                        </Badge>
-                                        {branch.testPullRequestUrl && (
-                                          <a
-                                            href={branch.testPullRequestUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-1 text-xs text-primary hover:underline"
-                                          >
-                                            <ExternalLink className="h-3 w-3" />
-                                            查看 PR
-                                          </a>
-                                        )}
-                                      </div>
-                                      {!branch.mergedToTest && (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleMergeToTest(branch.id)}
-                                          disabled={
-                                            mergingBranches.has(branch.id) ||
-                                            checkingBranches.has(branch.id) ||
-                                            branch.prStatus?.checks?.state === "pending" ||
-                                            branch.prStatus?.checks?.state === "failure" ||
-                                            branch.prStatus?.mergeable === false
-                                          }
-                                          className="h-7 text-xs bg-blue-600 text-white hover:bg-blue-700 border-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                        >
-                                          {mergingBranches.has(branch.id) ? (
-                                            <><Loader2 className="h-3 w-3 mr-1 animate-spin" />创建中</>
-                                          ) : (
-                                            "创建 PR"
-                                          )}
-                                        </Button>
-                                      )}
-                                    </div>
-                                    {branch.diffStatus?.test && branch.diffStatus.test.status !== "identical" && (
-                                      <div className="text-xs text-blue-600 mt-1">
-                                        {branch.diffStatus.test.status === "ahead" && `领先 ${branch.diffStatus.test.aheadBy} 个提交`}
-                                        {branch.diffStatus.test.status === "behind" && `落后 ${branch.diffStatus.test.behindBy} 个提交`}
-                                        {branch.diffStatus.test.status === "diverged" && `分叉 (领先 ${branch.diffStatus.test.aheadBy}，落后 ${branch.diffStatus.test.behindBy})`}
-                                      </div>
-                                    )}
-                                  </div>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {activeStages.length > 0 ? (
+                                    activeStages.map((stage) => {
+                                      const snapshot = branch.snapshots.find(
+                                        (item) => item.serviceId === service.id && item.serviceStageId === stage.id,
+                                      )
+                                      const pullRequest = branch.pullRequests.find(
+                                        (item) => item.serviceId === service.id && item.serviceStageId === stage.id,
+                                      )
+                                      const pullRequestUrl = snapshot?.latestPullRequestUrl || pullRequest?.htmlUrl
 
-                                  {/* 主分支 */}
-                                  <div className="border rounded-lg p-3 bg-green-50/50">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-green-800">主分支</span>
-                                        <Badge
-                                          variant="outline"
-                                          className={branch.mergedToMaster
-                                            ? "bg-green-100 text-green-800 border-green-300 text-xs"
-                                            : "bg-gray-100 text-gray-600 border-gray-300 text-xs"}
+                                      return (
+                                        <div
+                                          key={stage.id}
+                                          className="flex min-w-[220px] flex-1 items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2"
                                         >
-                                          {branch.mergedToMaster ? "✓ 已合并" : "✗ 未合并"}
-                                        </Badge>
-                                        {branch.masterPullRequestUrl && (
-                                          <a
-                                            href={branch.masterPullRequestUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-1 text-xs text-primary hover:underline"
-                                          >
-                                            <ExternalLink className="h-3 w-3" />
-                                            查看 PR
-                                          </a>
-                                        )}
-                                      </div>
-                                      {!branch.mergedToMaster && (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleMergeToMaster(branch.id)}
-                                          disabled={
-                                            mergingBranches.has(branch.id) ||
-                                            checkingBranches.has(branch.id) ||
-                                            branch.prStatus?.checks?.state === "pending" ||
-                                            branch.prStatus?.checks?.state === "failure" ||
-                                            branch.prStatus?.mergeable === false ||
-                                            (!branch.mergedToTest && Boolean(branch.pullRequestUrl))
-                                          }
-                                          className="h-7 text-xs bg-green-600 text-white hover:bg-green-700 border-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                          title={!branch.mergedToTest && branch.pullRequestUrl ? "请先通过测试分支验证" : undefined}
-                                        >
-                                          {mergingBranches.has(branch.id) ? (
-                                            <><Loader2 className="h-3 w-3 mr-1 animate-spin" />创建中</>
-                                          ) : (
-                                            "创建 PR"
-                                          )}
-                                        </Button>
-                                      )}
-                                    </div>
-                                    {branch.diffStatus?.master && branch.diffStatus.master.status !== "identical" && (
-                                      <div className="text-xs text-green-600 mt-1">
-                                        {branch.diffStatus.master.status === "ahead" && `领先 ${branch.diffStatus.master.aheadBy} 个提交`}
-                                        {branch.diffStatus.master.status === "behind" && `落后 ${branch.diffStatus.master.behindBy} 个提交`}
-                                        {branch.diffStatus.master.status === "diverged" && `分叉 (领先 ${branch.diffStatus.master.aheadBy}，落后 ${branch.diffStatus.master.behindBy})`}
-                                      </div>
-                                    )}
-                                  </div>
+                                          <div className="min-w-0">
+                                            <div className="truncate text-sm font-medium">{stage.name}</div>
+                                            <div className="mt-1 flex flex-wrap gap-1">
+                                              <Badge variant="outline" className={getStageBadgeClass(snapshot?.stageStatus ?? "idle")}>
+                                                {stageStatusLabels[snapshot?.stageStatus ?? "idle"]}
+                                              </Badge>
+                                              <Badge variant="outline" className={getGateBadgeClass(snapshot?.gateStatus ?? "unknown")}>
+                                                {gateStatusLabels[snapshot?.gateStatus ?? "unknown"]}
+                                              </Badge>
+                                            </div>
+                                          </div>
+
+                                          {pullRequestUrl ? (
+                                            <a
+                                              href={pullRequestUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border text-primary hover:bg-primary/5"
+                                              title="查看 PR"
+                                            >
+                                              <ExternalLink className="h-4 w-4" />
+                                            </a>
+                                          ) : null}
+                                        </div>
+                                      )
+                                    })
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">暂无阶段数据</span>
+                                  )}
                                 </div>
-                              </>
-                            )}
-                          </div>
-                          {isEditing && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteServiceBranch(branch.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                              </div>
+                            )
+                          })}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
+    </div>
   )
 }
