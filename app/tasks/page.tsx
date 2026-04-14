@@ -432,7 +432,7 @@ export default function KanbanBoard() {
                   </div>
 
                   <div
-                    className={`min-h-0 flex-1 overflow-y-auto space-y-3 rounded-lg p-2 transition-all duration-200 ${
+                    className={`hide-scrollbar min-h-0 flex-1 overflow-y-auto space-y-3 rounded-lg p-2 transition-all duration-200 ${
                       dragOverColumn === column.id
                         ? "border-2 border-dashed border-primary bg-primary/10"
                         : "border-2 border-transparent"

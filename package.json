@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "next dev -p 9981",
     "lint": "next lint",
-    "start": "next start",
+    "start": "next start -p 9981",
     "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"
   },

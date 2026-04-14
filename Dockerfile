@@ -32,7 +32,7 @@ FROM node:22-bookworm-slim AS runner
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
+ENV PORT=9981
 ENV HOSTNAME=0.0.0.0
 
 WORKDIR /app
@@ -51,6 +51,6 @@ VOLUME ["/app/data"]
 
 USER nextjs
 
-EXPOSE 3000
+EXPOSE 9981
 
 CMD ["node", "server.js"]

@@ -210,8 +210,8 @@
   "hotPaths": [
     {
       "path": "app/tasks/page.tsx",
-      "accessCount": 28,
-      "lastAccessed": 1776165029508,
+      "accessCount": 30,
+      "lastAccessed": 1776166069997,
       "type": "file"
     },
     {
@@ -228,8 +228,8 @@
     },
     {
       "path": "components/task-card.tsx",
-      "accessCount": 9,
-      "lastAccessed": 1776164376567,
+      "accessCount": 10,
+      "lastAccessed": 1776166014895,
       "type": "file"
     },
     {
@@ -240,8 +240,8 @@
     },
     {
       "path": "package.json",
-      "accessCount": 5,
-      "lastAccessed": 1776077578026,
+      "accessCount": 7,
+      "lastAccessed": 1776166062219,
       "type": "file"
     },
     {
@@ -299,6 +299,12 @@
       "type": "file"
     },
     {
+      "path": "Dockerfile",
+      "accessCount": 4,
+      "lastAccessed": 1776166068261,
+      "type": "file"
+    },
+    {
       "path": "hooks/use-local-storage.ts",
       "accessCount": 3,
       "lastAccessed": 1776077138809,
@@ -335,12 +341,6 @@
       "type": "file"
     },
     {
-      "path": "Dockerfile",
-      "accessCount": 2,
-      "lastAccessed": 1776165627558,
-      "type": "file"
-    },
-    {
       "path": ".dockerignore",
       "accessCount": 2,
       "lastAccessed": 1776165632710,
@@ -350,6 +350,12 @@
       "path": "scripts/upgrade.sh",
       "accessCount": 2,
       "lastAccessed": 1776165651130,
+      "type": "file"
+    },
+    {
+      "path": "docker-compose.yml",
+      "accessCount": 2,
+      "lastAccessed": 1776166062843,
       "type": "file"
     },
     {
@@ -479,15 +485,15 @@
       "type": "file"
     },
     {
-      "path": "docker-compose.yml",
-      "accessCount": 1,
-      "lastAccessed": 1776165373671,
-      "type": "file"
-    },
-    {
       "path": "next.config.mjs",
       "accessCount": 1,
       "lastAccessed": 1776165600335,
+      "type": "file"
+    },
+    {
+      "path": "app/globals.css",
+      "accessCount": 1,
+      "lastAccessed": 1776166041142,
       "type": "file"
     }
   ],
