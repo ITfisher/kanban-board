@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -76,6 +76,7 @@ export default function BranchesPage() {
   const [mergingBranches, setMergingBranches] = useState<Set<string>>(new Set())
   const [checkingBranches, setCheckingBranches] = useState<Set<string>>(new Set())
   const [refreshingAll, setRefreshingAll] = useState(false)
+  const initializedFromUrl = useRef(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -129,17 +130,21 @@ export default function BranchesPage() {
   )
 
   useEffect(() => {
-    if (selectedService && availableServices.includes(selectedService)) {
-      setCurrentService(selectedService)
-      return
+    if (availableServices.length === 0) return
+
+    if (!initializedFromUrl.current) {
+      initializedFromUrl.current = true
+      if (selectedService && availableServices.includes(selectedService)) {
+        setCurrentService(selectedService)
+        return
+      }
+      if (!currentService) {
+        setCurrentService(availableServices[0])
+        return
+      }
     }
 
-    if (!currentService && availableServices.length > 0) {
-      setCurrentService(availableServices[0])
-      return
-    }
-
-    if (currentService && !availableServices.includes(currentService) && availableServices.length > 0) {
+    if (currentService && !availableServices.includes(currentService)) {
       setCurrentService(availableServices[0])
     }
   }, [availableServices, currentService, selectedService])
@@ -470,13 +475,9 @@ export default function BranchesPage() {
         {branches.map((branch) => {
           const isMerged = getEnvironmentMerged(branch, tab)
           const prUrl = getEnvironmentPullRequestUrl(branch, tab)
-          const mergeDate = getEnvironmentMergeDate(branch, tab)
           const isRefreshing = checkingBranches.has(branch.id)
           const isMerging = mergingBranches.has(`${branch.id}-${tab}`)
           const latestPullRequestUrl = getLatestPullRequestUrl(branch)
-          const otherTab = tab === "test" ? "master" : "test"
-          const otherMerged = getEnvironmentMerged(branch, otherTab)
-          const targetBranch = tab === "test" ? currentServiceConfig?.testBranch || "未配置" : currentServiceConfig?.masterBranch || "未配置"
 
           return (
             <Card key={`${tab}-${branch.id}`} className="hover:shadow-sm transition-shadow">
@@ -511,16 +512,6 @@ export default function BranchesPage() {
                         <TooltipContent>需求分支</TooltipContent>
                       </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex items-center gap-1 rounded-md border px-2 py-1 bg-muted/40">
-                            <Server className="h-3 w-3" />
-                            <span className="font-mono text-foreground">{targetBranch}</span>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>{getEnvironmentLabel(tab)}目标分支</TooltipContent>
-                      </Tooltip>
-
                       {tab === "master" && !branch.mergedToTest && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -535,33 +526,11 @@ export default function BranchesPage() {
                   </div>
 
                   <div className="flex items-center gap-2 self-start lg:self-center">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className={`inline-flex h-9 w-9 items-center justify-center rounded-md border ${
-                          tab === "test" ? "border-blue-200 bg-blue-50 text-blue-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        }`}>
-                          {tab === "test" ? <GitBranch className="h-4 w-4" /> : <GitMerge className="h-4 w-4" />}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>{getEnvironmentLabel(tab)}</TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className={`inline-flex h-9 w-9 items-center justify-center rounded-md border ${
-                          otherMerged ? "border-green-200 bg-green-50 text-green-700" : "border-muted bg-muted/40 text-muted-foreground"
-                        }`}>
-                          {otherMerged ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>{otherTab === "test" ? "测试环境" : "线上环境"}{otherMerged ? "已合并" : "未合并"}</TooltipContent>
-                    </Tooltip>
-
-                    {prUrl && (
+                    {(prUrl || latestPullRequestUrl) && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <a
-                            href={prUrl}
+                            href={prUrl || latestPullRequestUrl!}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
@@ -569,51 +538,18 @@ export default function BranchesPage() {
                             <ExternalLink className="h-4 w-4" />
                           </a>
                         </TooltipTrigger>
-                        <TooltipContent>{tab === "test" ? "查看测试 PR" : "查看线上 PR"}</TooltipContent>
+                        <TooltipContent>查看 PR</TooltipContent>
                       </Tooltip>
                     )}
 
-                    {latestPullRequestUrl && latestPullRequestUrl !== prUrl && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <a
-                            href={latestPullRequestUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted bg-muted/40 text-muted-foreground hover:bg-muted/70"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </TooltipTrigger>
-                        <TooltipContent>查看最近 PR</TooltipContent>
-                      </Tooltip>
-                    )}
-
-                    {mergeDate && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-green-200 bg-green-50 text-green-700">
-                            <CheckCircle className="h-4 w-4" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>合并时间：{new Date(mergeDate).toLocaleString()}</TooltipContent>
-                      </Tooltip>
-                    )}
-
-                    {branch.lastStatusCheck && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted bg-muted/40 text-muted-foreground">
-                            <RefreshCw className="h-4 w-4" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>最近刷新：{new Date(branch.lastStatusCheck).toLocaleString()}</TooltipContent>
-                      </Tooltip>
-                    )}
-
-                    <Button variant="outline" size="icon" onClick={() => refreshBranchStatus(branch)} disabled={isRefreshing}>
-                      {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" onClick={() => refreshBranchStatus(branch)} disabled={isRefreshing}>
+                          {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{branch.lastStatusCheck ? `最近刷新：${new Date(branch.lastStatusCheck).toLocaleString()}` : "刷新状态"}</TooltipContent>
+                    </Tooltip>
 
                     {!isMerged && (
                       <Button
@@ -630,7 +566,7 @@ export default function BranchesPage() {
                         ) : (
                           <>
                             <GitMerge className="h-3 w-3 mr-1" />
-                            合并
+                            创建 PR
                           </>
                         )}
                       </Button>
@@ -686,34 +622,38 @@ export default function BranchesPage() {
         ) : currentService ? (
           <div className="max-w-6xl mx-auto space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <GitBranch className="h-5 w-5" />
-                  {currentService}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-4">
-                <div className="rounded-xl border p-4 bg-muted/20">
-                  <div className="text-sm text-muted-foreground">分支总数</div>
-                  <div className="text-3xl font-semibold mt-2">{stats.total}</div>
+              <CardContent className="flex items-center gap-6 py-4 flex-wrap">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <GitBranch className="h-4 w-4 text-muted-foreground" />
+                  <span>{currentService}</span>
+                  <span className="text-muted-foreground font-normal">· {stats.total} 条分支</span>
                 </div>
-                <div className="rounded-xl border p-4 bg-blue-50/60 border-blue-200">
-                  <div className="text-sm text-blue-800">测试环境</div>
-                  <div className="text-2xl font-semibold mt-2">{stats.testMerged}/{stats.total}</div>
-                  <div className="text-xs text-blue-700 mt-2">已合并 {stats.testMerged}，待处理 {stats.testPending}，已有 PR {stats.testWithPr}</div>
+                <div className="h-4 w-px bg-border" />
+                <div className="flex items-center gap-1.5 text-sm">
+                  <span className="text-muted-foreground">测试</span>
+                  <span className={`font-semibold ${stats.testMerged === stats.total ? "text-green-600" : "text-blue-600"}`}>
+                    {stats.testMerged}/{stats.total}
+                  </span>
                 </div>
-                <div className="rounded-xl border p-4 bg-emerald-50/60 border-emerald-200">
-                  <div className="text-sm text-emerald-800">线上环境</div>
-                  <div className="text-2xl font-semibold mt-2">{stats.masterMerged}/{stats.total}</div>
-                  <div className="text-xs text-emerald-700 mt-2">已合并 {stats.masterMerged}，待处理 {stats.masterPending}，已有 PR {stats.masterWithPr}</div>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <span className="text-muted-foreground">线上</span>
+                  <span className={`font-semibold ${stats.masterMerged === stats.total ? "text-green-600" : "text-emerald-600"}`}>
+                    {stats.masterMerged}/{stats.total}
+                  </span>
                 </div>
-                <div className="rounded-xl border p-4 bg-muted/20">
-                  <div className="text-sm text-muted-foreground">目标分支</div>
-                  <div className="text-sm mt-2 space-y-1">
-                    <div>测试: <span className="font-mono">{currentServiceConfig?.testBranch || "未配置"}</span></div>
-                    <div>线上: <span className="font-mono">{currentServiceConfig?.masterBranch || "未配置"}</span></div>
-                  </div>
-                </div>
+                {(currentServiceConfig?.testBranch || currentServiceConfig?.masterBranch) && (
+                  <>
+                    <div className="h-4 w-px bg-border" />
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      {currentServiceConfig?.testBranch && (
+                        <span>测试 → <span className="font-mono text-foreground">{currentServiceConfig.testBranch}</span></span>
+                      )}
+                      {currentServiceConfig?.masterBranch && (
+                        <span>线上 → <span className="font-mono text-foreground">{currentServiceConfig.masterBranch}</span></span>
+                      )}
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 

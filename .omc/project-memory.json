@@ -179,8 +179,14 @@
   "hotPaths": [
     {
       "path": "app/tasks/[id]/page.tsx",
-      "accessCount": 19,
-      "lastAccessed": 1776078212286,
+      "accessCount": 26,
+      "lastAccessed": 1776100402755,
+      "type": "file"
+    },
+    {
+      "path": "app/branches/page.tsx",
+      "accessCount": 18,
+      "lastAccessed": 1776100991584,
       "type": "file"
     },
     {
@@ -226,10 +232,10 @@
       "type": "file"
     },
     {
-      "path": "app/branches/page.tsx",
+      "path": "",
       "accessCount": 5,
-      "lastAccessed": 1776099789742,
-      "type": "file"
+      "lastAccessed": 1776100330947,
+      "type": "directory"
     },
     {
       "path": "app/api/github/check-merge-status/route.ts",
@@ -242,12 +248,6 @@
       "accessCount": 4,
       "lastAccessed": 1776077816351,
       "type": "file"
-    },
-    {
-      "path": "",
-      "accessCount": 4,
-      "lastAccessed": 1776077905839,
-      "type": "directory"
     },
     {
       "path": "app/services/page.tsx",
@@ -421,6 +421,12 @@
       "path": "app/api/github/configs/[id]/route.ts",
       "accessCount": 1,
       "lastAccessed": 1776077754285,
+      "type": "file"
+    },
+    {
+      "path": "components/git-branch-manager.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776100325008,
       "type": "file"
     }
   ],

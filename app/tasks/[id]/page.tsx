@@ -950,40 +950,27 @@ export default function TaskDetailPage() {
                                   >
                                     <ExternalLink className="h-3 w-3" />
                                   </a>
-                                  {checkingBranches.has(branch.id) && (
-                                    <div className="flex items-center gap-1 text-xs text-blue-600">
-                                      <RefreshCw className="h-3 w-3 animate-spin" />
-                                      检查中...
-                                    </div>
-                                  )}
-                                  {branch.mergedToTest && (
-                                    <Badge
-                                      variant="outline"
-                                      className="bg-blue-50 text-blue-700 border-blue-200"
-                                    >
-                                      🟢 已合并测试分支
-                                    </Badge>
-                                  )}
-                                  {branch.mergedToMaster && (
-                                    <Badge
-                                      variant="outline"
-                                      className="bg-green-50 text-green-700 border-green-200"
-                                    >
-                                      🔴 已合并主分支
-                                    </Badge>
-                                  )}
+                                  <button
+                                    onClick={() => handleRefreshBranchStatus(branch.id)}
+                                    disabled={checkingBranches.has(branch.id)}
+                                    className="p-1 hover:bg-muted rounded transition-colors"
+                                    title="刷新分支状态"
+                                  >
+                                    <RefreshCw
+                                      className={`h-3 w-3 text-muted-foreground ${
+                                        checkingBranches.has(branch.id) ? "animate-spin" : ""
+                                      }`}
+                                    />
+                                  </button>
                                 </div>
                                 <div className="flex items-center gap-2 mb-3">
-                                  <span className="text-sm text-muted-foreground">分支名:</span>
                                   <span className="font-mono text-sm bg-muted px-2 py-1 rounded">
                                     {branch.branchName}
                                   </span>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() =>
-                                      handleCopyGitCommand(branch)
-                                    }
+                                    onClick={() => handleCopyGitCommand(branch)}
                                     className="h-7 px-2"
                                     title="复制Git命令：若分支存在则切换，若不存在则从主分支创建"
                                   >
@@ -992,42 +979,30 @@ export default function TaskDetailPage() {
                                   </Button>
                                 </div>
 
-                                {/* 合并状态和操作 */}
-                                <div className="space-y-3">
-                                  {/* 测试分支部分 */}
+                                <div className="space-y-2">
+                                  {/* 测试分支 */}
                                   <div className="border rounded-lg p-3 bg-blue-50/50">
-                                    <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-blue-800">
-                                          🟦 测试分支
-                                        </span>
-                                        <button
-                                          onClick={() => handleRefreshBranchStatus(branch.id)}
-                                          disabled={checkingBranches.has(branch.id)}
-                                          className="p-1 hover:bg-blue-100 rounded transition-colors"
-                                          title="刷新测试分支PR状态、合并状态和分支差异"
+                                        <span className="text-sm font-medium text-blue-800">测试分支</span>
+                                        <Badge
+                                          variant="outline"
+                                          className={branch.mergedToTest
+                                            ? "bg-blue-100 text-blue-800 border-blue-300 text-xs"
+                                            : "bg-gray-100 text-gray-600 border-gray-300 text-xs"}
                                         >
-                                          <RefreshCw
-                                            className={`h-3 w-3 text-blue-600 ${
-                                              checkingBranches.has(branch.id) ? "animate-spin" : ""
-                                            }`}
-                                          />
-                                        </button>
-                                        {branch.mergedToTest && (
-                                          <Badge
-                                            variant="outline"
-                                            className="bg-blue-100 text-blue-800 border-blue-300 text-xs"
+                                          {branch.mergedToTest ? "✓ 已合并" : "✗ 未合并"}
+                                        </Badge>
+                                        {branch.testPullRequestUrl && (
+                                          <a
+                                            href={branch.testPullRequestUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-xs text-primary hover:underline"
                                           >
-                                            ✓ 已合并
-                                          </Badge>
-                                        )}
-                                        {!branch.mergedToTest && (
-                                          <Badge
-                                            variant="outline"
-                                            className="bg-gray-100 text-gray-600 border-gray-300 text-xs"
-                                          >
-                                            ✗ 未合并
-                                          </Badge>
+                                            <ExternalLink className="h-3 w-3" />
+                                            查看 PR
+                                          </a>
                                         )}
                                       </div>
                                       {!branch.mergedToTest && (
@@ -1043,85 +1018,47 @@ export default function TaskDetailPage() {
                                             branch.prStatus?.mergeable === false
                                           }
                                           className="h-7 text-xs bg-blue-600 text-white hover:bg-blue-700 border-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                          title={
-                                            branch.prStatus?.checks?.state === "pending"
-                                              ? "等待检查完成"
-                                              : branch.prStatus?.checks?.state === "failure"
-                                              ? "检查失败，请修复后再合并"
-                                              : branch.prStatus?.mergeable === false
-                                              ? "存在冲突，请先解决冲突"
-                                              : "合并到测试分支"
-                                          }
                                         >
                                           {mergingBranches.has(branch.id) ? (
-                                            <>
-                                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                              合并中...
-                                            </>
-                                          ) : checkingBranches.has(branch.id) ? (
-                                            <>
-                                              <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                                              检查中...
-                                            </>
+                                            <><Loader2 className="h-3 w-3 mr-1 animate-spin" />创建中</>
                                           ) : (
-                                            "🔄 合并到测试分支"
+                                            "创建 PR"
                                           )}
                                         </Button>
                                       )}
                                     </div>
-                                    {branch.mergedToTest && branch.testMergeDate && (
-                                      <div className="text-xs text-blue-700">
-                                        合并时间: {new Date(branch.testMergeDate).toLocaleString()}
-                                      </div>
-                                    )}
-                                    {branch.diffStatus?.test && (
+                                    {branch.diffStatus?.test && branch.diffStatus.test.status !== "identical" && (
                                       <div className="text-xs text-blue-600 mt-1">
-                                        分支差异:
-                                        {branch.diffStatus.test.status === "identical" && " 🟰 无差异"}
-                                        {branch.diffStatus.test.status === "ahead" &&
-                                          ` ⬆️ 领先 ${branch.diffStatus.test.aheadBy} 个提交`}
-                                        {branch.diffStatus.test.status === "behind" &&
-                                          ` ⬇️ 落后 ${branch.diffStatus.test.behindBy} 个提交`}
-                                        {branch.diffStatus.test.status === "diverged" &&
-                                          ` 🔀 分叉 (领先${branch.diffStatus.test.aheadBy}, 落后${branch.diffStatus.test.behindBy})`}
+                                        {branch.diffStatus.test.status === "ahead" && `领先 ${branch.diffStatus.test.aheadBy} 个提交`}
+                                        {branch.diffStatus.test.status === "behind" && `落后 ${branch.diffStatus.test.behindBy} 个提交`}
+                                        {branch.diffStatus.test.status === "diverged" && `分叉 (领先 ${branch.diffStatus.test.aheadBy}，落后 ${branch.diffStatus.test.behindBy})`}
                                       </div>
                                     )}
                                   </div>
 
-                                  {/* 主分支部分 */}
+                                  {/* 主分支 */}
                                   <div className="border rounded-lg p-3 bg-green-50/50">
-                                    <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-green-800">
-                                          🔴 主分支
-                                        </span>
-                                        <button
-                                          onClick={() => handleRefreshBranchStatus(branch.id)}
-                                          disabled={checkingBranches.has(branch.id)}
-                                          className="p-1 hover:bg-green-100 rounded transition-colors"
-                                          title="刷新主分支PR状态、合并状态和分支差异"
+                                        <span className="text-sm font-medium text-green-800">主分支</span>
+                                        <Badge
+                                          variant="outline"
+                                          className={branch.mergedToMaster
+                                            ? "bg-green-100 text-green-800 border-green-300 text-xs"
+                                            : "bg-gray-100 text-gray-600 border-gray-300 text-xs"}
                                         >
-                                          <RefreshCw
-                                            className={`h-3 w-3 text-green-600 ${
-                                              checkingBranches.has(branch.id) ? "animate-spin" : ""
-                                            }`}
-                                          />
-                                        </button>
-                                        {branch.mergedToMaster && (
-                                          <Badge
-                                            variant="outline"
-                                            className="bg-green-100 text-green-800 border-green-300 text-xs"
+                                          {branch.mergedToMaster ? "✓ 已合并" : "✗ 未合并"}
+                                        </Badge>
+                                        {branch.masterPullRequestUrl && (
+                                          <a
+                                            href={branch.masterPullRequestUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-xs text-primary hover:underline"
                                           >
-                                            ✓ 已合并
-                                          </Badge>
-                                        )}
-                                        {!branch.mergedToMaster && (
-                                          <Badge
-                                            variant="outline"
-                                            className="bg-gray-100 text-gray-600 border-gray-300 text-xs"
-                                          >
-                                            ✗ 未合并
-                                          </Badge>
+                                            <ExternalLink className="h-3 w-3" />
+                                            查看 PR
+                                          </a>
                                         )}
                                       </div>
                                       {!branch.mergedToMaster && (
@@ -1138,49 +1075,21 @@ export default function TaskDetailPage() {
                                             (!branch.mergedToTest && Boolean(branch.pullRequestUrl))
                                           }
                                           className="h-7 text-xs bg-green-600 text-white hover:bg-green-700 border-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                          title={
-                                            !branch.mergedToTest && branch.pullRequestUrl
-                                              ? "请先通过测试分支验证"
-                                              : branch.prStatus?.checks?.state === "pending"
-                                              ? "等待检查完成"
-                                              : branch.prStatus?.checks?.state === "failure"
-                                              ? "检查失败，请修复后再合并"
-                                              : branch.prStatus?.mergeable === false
-                                              ? "存在冲突，请先解决冲突"
-                                              : "合并到主分支"
-                                          }
+                                          title={!branch.mergedToTest && branch.pullRequestUrl ? "请先通过测试分支验证" : undefined}
                                         >
                                           {mergingBranches.has(branch.id) ? (
-                                            <>
-                                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                              合并中...
-                                            </>
-                                          ) : checkingBranches.has(branch.id) ? (
-                                            <>
-                                              <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                                              检查中...
-                                            </>
+                                            <><Loader2 className="h-3 w-3 mr-1 animate-spin" />创建中</>
                                           ) : (
-                                            "🚀 合并到主分支"
+                                            "创建 PR"
                                           )}
                                         </Button>
                                       )}
                                     </div>
-                                    {branch.mergedToMaster && branch.masterMergeDate && (
-                                      <div className="text-xs text-green-700">
-                                        合并时间: {new Date(branch.masterMergeDate).toLocaleString()}
-                                      </div>
-                                    )}
-                                    {branch.diffStatus?.master && (
+                                    {branch.diffStatus?.master && branch.diffStatus.master.status !== "identical" && (
                                       <div className="text-xs text-green-600 mt-1">
-                                        分支差异:
-                                        {branch.diffStatus.master.status === "identical" && " 🟰 无差异"}
-                                        {branch.diffStatus.master.status === "ahead" &&
-                                          ` ⬆️ 领先 ${branch.diffStatus.master.aheadBy} 个提交`}
-                                        {branch.diffStatus.master.status === "behind" &&
-                                          ` ⬇️ 落后 ${branch.diffStatus.master.behindBy} 个提交`}
-                                        {branch.diffStatus.master.status === "diverged" &&
-                                          ` 🔀 分叉 (领先${branch.diffStatus.master.aheadBy}, 落后${branch.diffStatus.master.behindBy})`}
+                                        {branch.diffStatus.master.status === "ahead" && `领先 ${branch.diffStatus.master.aheadBy} 个提交`}
+                                        {branch.diffStatus.master.status === "behind" && `落后 ${branch.diffStatus.master.behindBy} 个提交`}
+                                        {branch.diffStatus.master.status === "diverged" && `分叉 (领先 ${branch.diffStatus.master.aheadBy}，落后 ${branch.diffStatus.master.behindBy})`}
                                       </div>
                                     )}
                                   </div>
@@ -1199,30 +1108,6 @@ export default function TaskDetailPage() {
                             </Button>
                           )}
                         </div>
-
-                        {!isEditing && (
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <div className="flex items-center gap-4">
-                              <span>创建于: {new Date(branch.createdAt).toLocaleDateString()}</span>
-                              {branch.lastStatusCheck && (
-                                <span>
-                                  状态更新: {new Date(branch.lastStatusCheck).toLocaleString()}
-                                </span>
-                              )}
-                            </div>
-                            {branch.pullRequestUrl && (
-                              <a
-                                href={branch.pullRequestUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-primary hover:underline"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                查看 PR
-                              </a>
-                            )}
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
