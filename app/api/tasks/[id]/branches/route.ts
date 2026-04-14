@@ -11,6 +11,8 @@ type BranchInput = {
   serviceName?: string
   branchName: string
   pullRequestUrl?: string
+  testPullRequestUrl?: string
+  masterPullRequestUrl?: string
   createdAt?: string
 }
 
@@ -61,6 +63,14 @@ export async function PUT(
               branch.pullRequestUrl !== undefined
                 ? branch.pullRequestUrl ?? null
                 : existingBranch?.pullRequestUrl ?? null,
+            testPullRequestUrl:
+              branch.testPullRequestUrl !== undefined
+                ? branch.testPullRequestUrl ?? null
+                : existingBranch?.testPullRequestUrl ?? null,
+            masterPullRequestUrl:
+              branch.masterPullRequestUrl !== undefined
+                ? branch.masterPullRequestUrl ?? null
+                : existingBranch?.masterPullRequestUrl ?? null,
             mergedToTest: existingBranch?.mergedToTest ?? 0,
             mergedToMaster: existingBranch?.mergedToMaster ?? 0,
             testMergeDate: existingBranch?.testMergeDate ?? null,

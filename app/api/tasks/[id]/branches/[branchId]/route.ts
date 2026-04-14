@@ -52,6 +52,14 @@ export async function PATCH(
       updateData.pullRequestUrl = body.pullRequestUrl ?? null
     }
 
+    if (hasOwnProperty(body, "testPullRequestUrl")) {
+      updateData.testPullRequestUrl = body.testPullRequestUrl ?? null
+    }
+
+    if (hasOwnProperty(body, "masterPullRequestUrl")) {
+      updateData.masterPullRequestUrl = body.masterPullRequestUrl ?? null
+    }
+
     if (hasOwnProperty(body, "mergedToTest")) {
       updateData.mergedToTest = body.mergedToTest ? 1 : 0
     }

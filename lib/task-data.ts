@@ -29,6 +29,8 @@ export function toClientServiceBranch(branch: ServiceBranchRow): ServiceBranch {
     serviceName: branch.serviceName,
     branchName: branch.branchName,
     pullRequestUrl: branch.pullRequestUrl ?? undefined,
+    testPullRequestUrl: branch.testPullRequestUrl ?? undefined,
+    masterPullRequestUrl: branch.masterPullRequestUrl ?? undefined,
     mergedToTest: branch.mergedToTest === 1,
     mergedToMaster: branch.mergedToMaster === 1,
     testMergeDate: branch.testMergeDate ?? undefined,
