@@ -241,6 +241,15 @@ export const settings = sqliteTable("settings", {
   branchPrefix: text("branch_prefix").notNull().default(""),
 })
 
+export const taskComments = sqliteTable("task_comments", {
+  id: text("id").primaryKey(),
+  taskId: text("task_id").notNull(),
+  content: text("content").notNull(),
+  authorName: text("author_name").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})
+
 export type Repository = typeof repositories.$inferSelect
 export type NewRepository = typeof repositories.$inferInsert
 export type User = typeof users.$inferSelect
@@ -274,3 +283,5 @@ export type NewRepositoryConnection = typeof repositoryConnections.$inferInsert
 export type ServiceBranchStageSnapshot = typeof serviceBranchStageSnapshots.$inferSelect
 export type NewServiceBranchStageSnapshot = typeof serviceBranchStageSnapshots.$inferInsert
 export type Settings = typeof settings.$inferSelect
+export type TaskComment = typeof taskComments.$inferSelect
+export type NewTaskComment = typeof taskComments.$inferInsert

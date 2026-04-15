@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
+import { TaskCommentSection } from "@/components/task-comment-section"
 import { TASK_STATUS_LABELS } from "@/lib/task-status"
 import type { TaskPriority, TaskStatus } from "@/lib/types"
 import {
@@ -675,6 +676,13 @@ export default function TaskDetailPage() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* 备注 */}
+          <Card>
+            <CardContent className="pt-6">
+              <TaskCommentSection taskId={taskId} />
             </CardContent>
           </Card>
         </div>

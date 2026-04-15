@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast"
 import { TASK_STATUS_LABELS } from "@/lib/task-status"
 import type { Task } from "@/lib/types"
 import { ExternalLink, GitBranch, Save, Trash2 } from "lucide-react"
+import { TaskCommentSection } from "@/components/task-comment-section"
 
 interface TaskDetailDialogProps {
   task: Task | null
@@ -194,6 +195,11 @@ export function TaskDetailDialog({ task, open, onOpenChange, onUpdateTask, onDel
                 还没有创建需求分支
               </div>
             )}
+          </div>
+
+          {/* 备注 */}
+          <div className="border-t pt-4">
+            <TaskCommentSection taskId={task.id} />
           </div>
 
           {/* 时间信息 */}

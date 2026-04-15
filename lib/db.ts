@@ -269,6 +269,17 @@ function initSchema(sqlite: Database.Database) {
       branch_prefix TEXT NOT NULL DEFAULT ''
     );
 
+    CREATE TABLE IF NOT EXISTS task_comments (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      content TEXT NOT NULL,
+      author_name TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_task_comments_task_id ON task_comments(task_id);
+
     CREATE INDEX IF NOT EXISTS idx_task_branches_task_id ON task_branches(task_id);
     CREATE INDEX IF NOT EXISTS idx_task_branches_repository_id ON task_branches(repository_id);
     CREATE INDEX IF NOT EXISTS idx_task_branch_services_branch_id ON task_branch_services(task_branch_id);

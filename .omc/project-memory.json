@@ -210,8 +210,8 @@
   "hotPaths": [
     {
       "path": "app/tasks/[id]/page.tsx",
-      "accessCount": 45,
-      "lastAccessed": 1776243232260,
+      "accessCount": 48,
+      "lastAccessed": 1776243558536,
       "type": "file"
     },
     {
@@ -222,8 +222,8 @@
     },
     {
       "path": "components/task-detail-dialog.tsx",
-      "accessCount": 29,
-      "lastAccessed": 1776243180439,
+      "accessCount": 31,
+      "lastAccessed": 1776243542452,
       "type": "file"
     },
     {
@@ -254,6 +254,12 @@
       "path": "package.json",
       "accessCount": 7,
       "lastAccessed": 1776166062219,
+      "type": "file"
+    },
+    {
+      "path": "lib/schema.ts",
+      "accessCount": 7,
+      "lastAccessed": 1776243471993,
       "type": "file"
     },
     {
@@ -323,6 +329,12 @@
       "type": "file"
     },
     {
+      "path": "lib/db.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776243477811,
+      "type": "file"
+    },
+    {
       "path": "hooks/use-local-storage.ts",
       "accessCount": 3,
       "lastAccessed": 1776077138809,
@@ -338,12 +350,6 @@
       "path": "components/main-layout.tsx",
       "accessCount": 3,
       "lastAccessed": 1776078268942,
-      "type": "file"
-    },
-    {
-      "path": "lib/schema.ts",
-      "accessCount": 3,
-      "lastAccessed": 1776186590051,
       "type": "file"
     },
     {
@@ -398,12 +404,6 @@
       "path": "design.txt",
       "accessCount": 2,
       "lastAccessed": 1776186574725,
-      "type": "file"
-    },
-    {
-      "path": "lib/db.ts",
-      "accessCount": 2,
-      "lastAccessed": 1776186590337,
       "type": "file"
     },
     {
