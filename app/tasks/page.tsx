@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { CreateTaskDialog } from "@/components/create-task-dialog"
 import { SearchFilter } from "@/components/search-filter"
 import { TaskCard } from "@/components/task-card"
+import { TaskDetailDialog } from "@/components/task-detail-dialog"
 import { toast } from "@/hooks/use-toast"
 import { DEFAULT_SETTINGS } from "@/lib/default-settings"
 import { isCompletedTaskStatus, TASK_STATUS_COLUMNS, TASK_STATUS_LABELS } from "@/lib/task-status"
@@ -70,6 +71,7 @@ export default function KanbanBoard() {
   const [createdDateEnd, setCreatedDateEnd] = useState("")
   const [completedDateStart, setCompletedDateStart] = useState("")
   const [completedDateEnd, setCompletedDateEnd] = useState("")
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
   const [columnVisibility, setColumnVisibility] = useState<Record<TaskStatus, boolean>>({
@@ -227,6 +229,18 @@ export default function KanbanBoard() {
     }
   }
 
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("删除失败")
+      setTasks((prev) => prev.filter((t) => t.id !== taskId))
+      setSelectedTask(null)
+      toast({ title: "任务已删除", description: "任务及关联需求分支已全部删除" })
+    } catch {
+      toast({ title: "删除失败", description: "无法删除任务，请重试", variant: "destructive" })
+    }
+  }
+
   const handleUpdateTask = async (updatedTask: Task) => {
     try {
       const res = await fetch(`/api/tasks/${updatedTask.id}`, {
@@ -248,6 +262,7 @@ export default function KanbanBoard() {
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDraggedTaskId(taskId)
+    e.dataTransfer.setData("text/plain", taskId)
     e.dataTransfer.effectAllowed = "move"
   }
 
@@ -461,12 +476,14 @@ export default function KanbanBoard() {
                     {getTasksByStatus(column.id).map((task) => (
                       <div
                         key={task.id}
+                        draggable
                         onDragStart={(e) => handleDragStart(e, task.id)}
                         onDragEnd={handleDragEnd}
                       >
                         <TaskCard
                           task={task}
                           onUpdate={handleUpdateTask}
+                          onSelect={setSelectedTask}
                           isDragging={draggedTaskId === task.id}
                           compactView={settings.compactView}
                           showAssigneeAvatars={settings.showAssigneeAvatars}
@@ -479,6 +496,14 @@ export default function KanbanBoard() {
             </div>
           </div>
         )}
+
+        <TaskDetailDialog
+          task={selectedTask}
+          open={selectedTask !== null}
+          onOpenChange={(open) => { if (!open) setSelectedTask(null) }}
+          onUpdateTask={handleUpdateTask}
+          onDeleteTask={handleDeleteTask}
+        />
 
         <div className="fixed bottom-4 right-4 rounded-lg border bg-card p-2 text-xs text-muted-foreground shadow-sm">
           <div className="space-y-1">

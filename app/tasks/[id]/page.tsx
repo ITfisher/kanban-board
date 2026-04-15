@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
 import { TASK_STATUS_LABELS } from "@/lib/task-status"
-import type { TaskPriority, TaskStatus, User as UserOption } from "@/lib/types"
+import type { TaskPriority, TaskStatus } from "@/lib/types"
 import {
   ArrowLeft,
   ExternalLink,
@@ -20,6 +20,7 @@ import {
   PencilLine,
   Save,
   Server,
+  Trash2,
   User,
   X,
 } from "lucide-react"
@@ -79,7 +80,6 @@ type TaskDetailResponse = {
   description: string
   status: TaskStatus
   priority: TaskPriority
-  ownerUserId?: string
   assignee?: {
     name: string
     avatar?: string
@@ -95,7 +95,7 @@ type EditableTask = {
   description: string
   status: TaskStatus
   priority: TaskPriority
-  ownerUserId?: string
+  assigneeName: string
 }
 
 const priorityLabels: Record<TaskPriority, string> = {
@@ -195,42 +195,29 @@ export default function TaskDetailPage() {
 
   const [task, setTask] = useState<TaskDetailResponse | null>(null)
   const [form, setForm] = useState<EditableTask | null>(null)
-  const [users, setUsers] = useState<UserOption[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     const loadTask = async () => {
       setLoading(true)
       try {
-        const [taskResponse, usersResponse] = await Promise.all([
-          fetch(`/api/tasks/${taskId}`, { cache: "no-store" }),
-          fetch("/api/users", { cache: "no-store" }),
-        ])
+        const taskResponse = await fetch(`/api/tasks/${taskId}`, { cache: "no-store" })
         if (!taskResponse.ok) {
           throw new Error(taskResponse.status === 404 ? "任务不存在" : "加载任务失败")
         }
 
         const data: TaskDetailResponse = await taskResponse.json()
-        if (usersResponse.ok) {
-          const usersData = await usersResponse.json()
-          setUsers(Array.isArray(usersData) ? usersData : [])
-        } else {
-          setUsers([])
-          toast({
-            title: "用户列表加载失败",
-            description: `负责人选择暂不可用（${usersResponse.status}）`,
-            variant: "destructive",
-          })
-        }
         setTask(data)
         setForm({
           title: data.title,
           description: data.description,
           status: data.status,
           priority: data.priority,
-          ownerUserId: data.ownerUserId,
+          assigneeName: data.assignee?.name ?? "",
         })
       } catch (error) {
         toast({
@@ -271,7 +258,7 @@ export default function TaskDetailPage() {
           description: form.description,
           status: form.status,
           priority: form.priority,
-          ownerUserId: form.ownerUserId ?? null,
+          assignee: form.assigneeName.trim() ? { name: form.assigneeName.trim() } : null,
         }),
       })
 
@@ -287,7 +274,7 @@ export default function TaskDetailPage() {
         description: updated.description,
         status: updated.status,
         priority: updated.priority,
-        ownerUserId: updated.ownerUserId,
+        assigneeName: updated.assignee?.name ?? "",
       })
       setIsEditing(false)
       toast({ title: "任务已保存", description: "基础信息已更新，需求分支聚合视图已刷新。" })
@@ -309,9 +296,23 @@ export default function TaskDetailPage() {
       description: task.description,
       status: task.status,
       priority: task.priority,
-      ownerUserId: task.ownerUserId,
+      assigneeName: task.assignee?.name ?? "",
     })
     setIsEditing(false)
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("删除失败")
+      toast({ title: "任务已删除", description: "任务及关联需求分支已全部删除" })
+      router.push("/tasks")
+    } catch (error) {
+      toast({ title: "删除失败", description: error instanceof Error ? error.message : "请重试", variant: "destructive" })
+      setDeleting(false)
+      setConfirmDelete(false)
+    }
   }
 
   if (loading) {
@@ -356,7 +357,18 @@ export default function TaskDetailPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {isEditing ? (
+            {confirmDelete ? (
+              <>
+                <span className="text-sm text-destructive">确认删除任务及所有关联分支？</span>
+                <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+                  {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                  确认删除
+                </Button>
+                <Button variant="outline" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                  取消
+                </Button>
+              </>
+            ) : isEditing ? (
               <>
                 <Button variant="outline" onClick={handleCancel} disabled={saving}>
                   <X className="mr-2 h-4 w-4" />
@@ -368,10 +380,16 @@ export default function TaskDetailPage() {
                 </Button>
               </>
             ) : (
-              <Button onClick={() => setIsEditing(true)}>
-                <PencilLine className="mr-2 h-4 w-4" />
-                编辑任务
-              </Button>
+              <>
+                <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  删除
+                </Button>
+                <Button onClick={() => setIsEditing(true)}>
+                  <PencilLine className="mr-2 h-4 w-4" />
+                  编辑任务
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -463,39 +481,21 @@ export default function TaskDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="task-assignee">负责人</Label>
-                    <select
+                    <Input
                       id="task-assignee"
-                      value={form.ownerUserId ?? "unassigned"}
-                      onChange={(event) =>
-                        setForm((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                ownerUserId: event.target.value === "unassigned" ? undefined : event.target.value,
-                              }
-                            : prev
-                        )
+                      value={form.assigneeName}
+                      onChange={(e) =>
+                        setForm((prev) => prev ? { ...prev, assigneeName: e.target.value } : prev)
                       }
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="unassigned">未分配</option>
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name}
-                          {user.email ? ` (${user.email})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                    {users.length === 0 && (
-                      <p className="text-xs text-muted-foreground">暂无可选用户，请先到用户管理中创建。</p>
-                    )}
+                      placeholder="输入负责人姓名"
+                    />
                   </div>
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-lg border p-4">
                     <div className="text-xs text-muted-foreground">负责人</div>
-                    <div className="mt-2 font-medium">{task.assignee?.name || "未分配"}</div>
+                    <div className="mt-2 font-medium">{task.assignee?.name}</div>
                   </div>
                   <div className="rounded-lg border p-4">
                     <div className="text-xs text-muted-foreground">创建时间</div>

@@ -209,21 +209,27 @@
   },
   "hotPaths": [
     {
-      "path": "app/tasks/page.tsx",
-      "accessCount": 31,
-      "lastAccessed": 1776185160881,
+      "path": "app/tasks/[id]/page.tsx",
+      "accessCount": 45,
+      "lastAccessed": 1776243232260,
       "type": "file"
     },
     {
-      "path": "app/tasks/[id]/page.tsx",
-      "accessCount": 26,
-      "lastAccessed": 1776185165154,
+      "path": "app/tasks/page.tsx",
+      "accessCount": 44,
+      "lastAccessed": 1776243190401,
       "type": "file"
     },
     {
       "path": "components/task-detail-dialog.tsx",
-      "accessCount": 24,
-      "lastAccessed": 1776186630052,
+      "accessCount": 29,
+      "lastAccessed": 1776243180439,
+      "type": "file"
+    },
+    {
+      "path": "components/task-card.tsx",
+      "accessCount": 17,
+      "lastAccessed": 1776242174774,
       "type": "file"
     },
     {
@@ -234,14 +240,14 @@
     },
     {
       "path": "",
-      "accessCount": 12,
-      "lastAccessed": 1776186582859,
+      "accessCount": 13,
+      "lastAccessed": 1776231141769,
       "type": "directory"
     },
     {
-      "path": "components/task-card.tsx",
-      "accessCount": 11,
-      "lastAccessed": 1776185168910,
+      "path": "app/settings/page.tsx",
+      "accessCount": 9,
+      "lastAccessed": 1776231368464,
       "type": "file"
     },
     {
@@ -281,12 +287,6 @@
       "type": "file"
     },
     {
-      "path": "app/settings/page.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1776078121273,
-      "type": "file"
-    },
-    {
       "path": "app/api/github/check-merge-status/route.ts",
       "accessCount": 4,
       "lastAccessed": 1776077816206,
@@ -308,6 +308,18 @@
       "path": "Dockerfile",
       "accessCount": 4,
       "lastAccessed": 1776166068261,
+      "type": "file"
+    },
+    {
+      "path": "app/api/tasks/route.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776231537586,
+      "type": "file"
+    },
+    {
+      "path": "app/api/tasks/[id]/route.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776231622113,
       "type": "file"
     },
     {
@@ -341,15 +353,9 @@
       "type": "directory"
     },
     {
-      "path": "app/api/tasks/route.ts",
+      "path": "lib/types.ts",
       "accessCount": 3,
-      "lastAccessed": 1776186613894,
-      "type": "file"
-    },
-    {
-      "path": "app/api/tasks/[id]/route.ts",
-      "accessCount": 3,
-      "lastAccessed": 1776186618252,
+      "lastAccessed": 1776231205927,
       "type": "file"
     },
     {
@@ -392,12 +398,6 @@
       "path": "design.txt",
       "accessCount": 2,
       "lastAccessed": 1776186574725,
-      "type": "file"
-    },
-    {
-      "path": "lib/types.ts",
-      "accessCount": 2,
-      "lastAccessed": 1776186589679,
       "type": "file"
     },
     {

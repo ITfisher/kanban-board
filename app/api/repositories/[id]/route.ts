@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { getRepositoryPayload } from "@/lib/domain-data"
+import { parseRepositoryUrl } from "@/lib/repository-url"
 import { repositories, services, taskBranches } from "@/lib/schema"
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -30,14 +31,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await request.json()
+    const parsedRepoUrl = typeof body.repoUrl === "string" ? parseRepositoryUrl(body.repoUrl) : null
     await db
       .update(repositories)
       .set({
-        name: body.name?.trim() ?? existing.name,
-        provider: body.provider ?? existing.provider,
-        domain: body.domain ?? existing.domain,
-        owner: body.owner?.trim() ?? existing.owner,
-        slug: body.slug?.trim() ?? existing.slug,
+        name: body.name?.trim() ?? parsedRepoUrl?.name ?? existing.name,
+        provider: body.provider ?? parsedRepoUrl?.provider ?? existing.provider,
+        domain: body.domain?.trim() ?? parsedRepoUrl?.domain ?? existing.domain,
+        owner: body.owner?.trim() ?? parsedRepoUrl?.owner ?? existing.owner,
+        slug: body.slug?.trim() ?? parsedRepoUrl?.slug ?? existing.slug,
         defaultBranch: body.defaultBranch ?? existing.defaultBranch,
         description: body.description ?? existing.description ?? "",
         archivedAt: body.archivedAt ?? existing.archivedAt ?? null,

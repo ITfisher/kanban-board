@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
-import { Check, Edit2, GitBranch, GitMerge, Loader2, Plus, Trash2, X } from "lucide-react"
+import { parseRepositoryUrl } from "@/lib/repository-url"
+import { Check, Edit2, GitBranch, GitMerge, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react"
 
 type RepositoryItem = {
   id: string
@@ -48,6 +49,7 @@ type TaskBranchItem = {
 }
 
 type RepositoryForm = {
+  repoUrl: string
   owner: string
   name: string
   slug: string
@@ -57,6 +59,7 @@ type RepositoryForm = {
 }
 
 const emptyForm: RepositoryForm = {
+  repoUrl: "",
   owner: "",
   name: "",
   slug: "",
@@ -78,6 +81,7 @@ export default function RepositoriesPage() {
   const [deletingRepository, setDeletingRepository] = useState<string | null>(null)
   const [form, setForm] = useState<RepositoryForm>(emptyForm)
   const [selectedConnectionIds, setSelectedConnectionIds] = useState<string[]>([])
+  const parsedRepoUrl = useMemo(() => parseRepositoryUrl(form.repoUrl), [form.repoUrl])
 
   const refreshData = useCallback(async () => {
     setLoading(true)
@@ -175,6 +179,7 @@ export default function RepositoriesPage() {
 
   function startEdit(repository: RepositoryItem) {
     setForm({
+      repoUrl: `https://${repository.domain}/${repository.owner}/${repository.slug}.git`,
       owner: repository.owner,
       name: repository.name,
       slug: repository.slug,
@@ -187,6 +192,47 @@ export default function RepositoriesPage() {
     )
     setEditingRepository(repository.id)
     setShowCreateForm(false)
+  }
+
+  function suggestConnectionIds(domain: string) {
+    const sameDomainConnections = connections.filter((connection) => connection.domain === domain)
+    const defaultConnection = sameDomainConnections.find((connection) => connection.isDefault)
+
+    if (defaultConnection) {
+      return [defaultConnection.id]
+    }
+
+    if (sameDomainConnections.length === 1) {
+      return [sameDomainConnections[0].id]
+    }
+
+    return []
+  }
+
+  function applyParsedRepository(options?: { autoSelectConnections?: boolean; silent?: boolean }) {
+    const autoSelectConnections = options?.autoSelectConnections ?? true
+    if (!parsedRepoUrl) {
+      if (!options?.silent) {
+        toast({
+          title: "仓库地址无法解析",
+          description: "请填写类似 https://github.com/owner/repo.git 或 git@github.com:owner/repo.git 的地址",
+          variant: "destructive",
+        })
+      }
+      return
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      owner: parsedRepoUrl.owner,
+      name: parsedRepoUrl.name,
+      slug: parsedRepoUrl.slug,
+      domain: parsedRepoUrl.domain,
+    }))
+
+    if (autoSelectConnections) {
+      setSelectedConnectionIds((prev) => (prev.length > 0 ? prev : suggestConnectionIds(parsedRepoUrl.domain)))
+    }
   }
 
   async function syncRepositoryConnections(repositoryId: string, nextConnectionIds: string[]) {
@@ -227,18 +273,32 @@ export default function RepositoriesPage() {
   }
 
   async function handleSubmit() {
-    if (!form.owner.trim() || !form.name.trim()) {
-      toast({ title: "请先填写 owner 和仓库名称", variant: "destructive" })
+    if (form.repoUrl.trim() && parsedRepoUrl) {
+      const parsedConnectionSuggestion = suggestConnectionIds(parsedRepoUrl.domain)
+      if (selectedConnectionIds.length === 0 && parsedConnectionSuggestion.length > 0) {
+        setSelectedConnectionIds(parsedConnectionSuggestion)
+      }
+    }
+
+    if (!form.repoUrl.trim() && (!form.owner.trim() || !form.name.trim())) {
+      toast({ title: "请先填写仓库地址，或补全 owner 和仓库名称", variant: "destructive" })
+      return
+    }
+
+    if (form.repoUrl.trim() && !parsedRepoUrl && (!form.owner.trim() || !form.name.trim())) {
+      toast({ title: "仓库地址解析失败，请检查 URL 或手动补全 owner 和仓库名称", variant: "destructive" })
       return
     }
 
     setSubmitting(true)
     try {
       const payload = {
+        repoUrl: form.repoUrl.trim() || undefined,
         owner: form.owner.trim(),
         name: form.name.trim(),
         slug: form.slug.trim() || form.name.trim(),
-        domain: form.domain.trim() || "github.com",
+        domain: form.domain.trim() || parsedRepoUrl?.domain || "github.com",
+        provider: parsedRepoUrl?.provider,
         defaultBranch: form.defaultBranch.trim() || "main",
         description: form.description.trim(),
       }
@@ -363,6 +423,38 @@ export default function RepositoriesPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="repo-url">仓库地址</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={() => applyParsedRepository()} disabled={!form.repoUrl.trim()}>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      从 URL 解析
+                    </Button>
+                  </div>
+                  <Input
+                    id="repo-url"
+                    value={form.repoUrl}
+                    onChange={(event) => setForm((prev) => ({ ...prev, repoUrl: event.target.value }))}
+                    onBlur={() => {
+                      if (form.repoUrl.trim()) {
+                        applyParsedRepository({ silent: true })
+                      }
+                    }}
+                    placeholder="例如 https://github.com/ITfisher/kanban-board.git"
+                  />
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    支持 `https://github.com/owner/repo.git`、`https://域名/owner/repo`、`git@域名:owner/repo.git`
+                  </div>
+                  {parsedRepoUrl ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Badge variant="secondary">{parsedRepoUrl.provider}</Badge>
+                      <Badge variant="outline">{parsedRepoUrl.domain}</Badge>
+                      <Badge variant="outline">{parsedRepoUrl.fullName}</Badge>
+                    </div>
+                  ) : form.repoUrl.trim() ? (
+                    <p className="mt-2 text-xs text-destructive">当前地址无法自动解析，请检查格式或手动补全字段。</p>
+                  ) : null}
+                </div>
                 <div>
                   <Label htmlFor="repo-owner">Owner</Label>
                   <Input
@@ -424,7 +516,9 @@ export default function RepositoriesPage() {
               <div className="space-y-3 rounded-lg border p-4">
                 <div>
                   <div className="text-sm font-medium">SCM 绑定</div>
-                  <div className="text-xs text-muted-foreground">可将一个或多个 SCM 连接显式绑定到当前仓库。</div>
+                  <div className="text-xs text-muted-foreground">
+                    系统会优先按仓库地址里的域名自动推荐连接；如果同域有多套凭证，你也可以手动改绑。
+                  </div>
                 </div>
                 {connections.length === 0 ? (
                   <div className="text-sm text-muted-foreground">暂无 SCM 连接，可先去设置页创建。</div>
@@ -432,6 +526,7 @@ export default function RepositoriesPage() {
                   <div className="grid gap-3 md:grid-cols-2">
                     {connections.map((connection) => {
                       const checked = selectedConnectionIds.includes(connection.id)
+                      const isRecommended = parsedRepoUrl?.domain === connection.domain
 
                       return (
                         <label
@@ -443,6 +538,7 @@ export default function RepositoriesPage() {
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium">{connection.name}</span>
                               {connection.isDefault && <Badge variant="secondary">默认</Badge>}
+                              {isRecommended && <Badge variant="outline">同域推荐</Badge>}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {connection.provider} · {connection.domain}/{connection.owner}

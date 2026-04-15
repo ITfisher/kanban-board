@@ -1,7 +1,8 @@
 "use client"
 
+import type React from "react"
 import Link from "next/link"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +24,7 @@ type TaskBranchCardView = TaskBranch & {
 interface TaskCardProps {
   task: Task
   onUpdate?: (task: Task) => void
+  onSelect?: (task: Task) => void
   isDragging?: boolean
   compactView?: boolean
   showAssigneeAvatars?: boolean
@@ -75,6 +77,7 @@ function getServiceSummary(branch: TaskBranchCardView): string {
 
 export function TaskCard({
   task,
+  onSelect,
   isDragging = false,
   compactView = false,
   showAssigneeAvatars = true,
@@ -82,8 +85,16 @@ export function TaskCard({
   const taskBranches = getTaskBranches(task)
   const updatedAtLabel = task.updatedAt ? new Date(task.updatedAt).toLocaleString() : "未记录"
 
+  function handleCardClick(e: React.MouseEvent) {
+    if (e.target instanceof HTMLElement && (e.target.closest("button") || e.target.closest("a"))) return
+    onSelect?.(task)
+  }
+
   return (
-    <Card className={isDragging ? "opacity-60" : undefined}>
+    <Card
+      className={`cursor-pointer transition-shadow hover:shadow-md ${isDragging ? "opacity-60" : ""}`}
+      onClick={handleCardClick}
+    >
       <CardHeader className={compactView ? "p-3" : "p-4"}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-2">
@@ -145,18 +156,15 @@ export function TaskCard({
 
       <CardFooter className="flex items-center justify-between gap-3 px-4 pb-4 pt-0 text-xs text-muted-foreground">
         <div className="flex min-w-0 items-center gap-2">
-          {task.assignee ? (
+          {task.assignee && (
             <div className="flex min-w-0 items-center gap-2">
-              {showAssigneeAvatars && (
+              {showAssigneeAvatars && task.assignee.avatar && (
                 <Avatar className="h-5 w-5">
                   <AvatarImage src={task.assignee.avatar} alt={task.assignee.name} />
-                  <AvatarFallback>{task.assignee.name.slice(0, 1)}</AvatarFallback>
                 </Avatar>
               )}
               <span className="truncate">{task.assignee.name}</span>
             </div>
-          ) : (
-            <span>未分配负责人</span>
           )}
         </div>
         <span className="shrink-0">更新于 {updatedAtLabel}</span>
