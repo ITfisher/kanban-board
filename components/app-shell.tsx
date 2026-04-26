@@ -18,6 +18,7 @@ interface AppShellProps {
 
 const shellRouteMatchers = [
   /^\/dashboard$/,
+  /^\/market-analysis$/,
   /^\/services(?:\/|$)/,
   /^\/users(?:\/|$)/,
   /^\/repositories(?:\/|$)/,

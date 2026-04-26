@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Server, GitBranch, Settings, ChevronLeft, ChevronRight, Kanban, BarChart3, GitMerge, Users } from "lucide-react"
+import { LayoutDashboard, Server, GitBranch, Settings, ChevronLeft, ChevronRight, Kanban, BarChart3, GitMerge, Users, LineChart } from "lucide-react"
 
 interface SidebarProps {
   taskCount?: number
@@ -19,6 +19,12 @@ const navigation = [
     href: "/dashboard",
     icon: BarChart3,
     description: "数据统计与分析",
+  },
+  {
+    name: "行情分析",
+    href: "/market-analysis",
+    icon: LineChart,
+    description: "查看热度、波动和选币结果",
   },
   {
     name: "服务管理",

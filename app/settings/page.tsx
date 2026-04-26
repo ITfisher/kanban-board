@@ -387,7 +387,7 @@ export default function SettingsPage() {
                 {scmConnections.length === 0 && !showScmForm ? (
                   <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
                     <Key className="mx-auto mb-2 h-8 w-8 opacity-40" />
-                    暂无 SCM 连接，点击右上角"添加连接"开始配置
+                    暂无 SCM 连接，点击右上角“添加连接”开始配置
                   </div>
                 ) : (
                   <div className="space-y-3">

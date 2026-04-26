@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1776164182889,
+  "lastScanned": 1776653217894,
   "projectRoot": "/Users/panda/Documents/github/kanban-board",
   "techStack": {
     "languages": [
@@ -48,9 +48,9 @@
     "devCommand": "pnpm dev",
     "scripts": {
       "build": "next build",
-      "dev": "next dev",
+      "dev": "next dev -p 9981",
       "lint": "next lint",
-      "start": "next start",
+      "start": "next start -p 9981",
       "test": "node --test tests/*.test.mjs",
       "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"
     }
@@ -84,7 +84,7 @@
       "path": "app",
       "purpose": "Application code",
       "fileCount": 4,
-      "lastAccessed": 1776164182875,
+      "lastAccessed": 1776653217869,
       "keyFiles": [
         "globals.css",
         "layout.tsx",
@@ -95,8 +95,8 @@
     "components": {
       "path": "components",
       "purpose": "UI components",
-      "fileCount": 13,
-      "lastAccessed": 1776164182875,
+      "fileCount": 12,
+      "lastAccessed": 1776653217870,
       "keyFiles": [
         "add-service-dialog.tsx",
         "app-shell.tsx",
@@ -109,7 +109,7 @@
       "path": "data",
       "purpose": "Data files",
       "fileCount": 3,
-      "lastAccessed": 1776164182879,
+      "lastAccessed": 1776653217885,
       "keyFiles": [
         "kanban.db",
         "kanban.db-shm",
@@ -120,7 +120,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 1,
-      "lastAccessed": 1776164182879,
+      "lastAccessed": 1776653217886,
       "keyFiles": [
         "architecture-and-conventions.md"
       ]
@@ -129,7 +129,7 @@
       "path": "hooks",
       "purpose": null,
       "fileCount": 3,
-      "lastAccessed": 1776164182879,
+      "lastAccessed": 1776653217886,
       "keyFiles": [
         "use-app-settings.ts",
         "use-mobile.ts",
@@ -139,21 +139,21 @@
     "lib": {
       "path": "lib",
       "purpose": "Library code",
-      "fileCount": 15,
-      "lastAccessed": 1776164182879,
+      "fileCount": 18,
+      "lastAccessed": 1776653217886,
       "keyFiles": [
         "branch-generator.ts",
         "branch-name.ts",
         "db.ts",
         "default-settings.ts",
-        "git-commands.ts"
+        "domain-data.ts"
       ]
     },
     "public": {
       "path": "public",
       "purpose": "Public files",
       "fileCount": 5,
-      "lastAccessed": 1776164182879,
+      "lastAccessed": 1776653217887,
       "keyFiles": [
         "placeholder-logo.png",
         "placeholder-logo.svg",
@@ -165,17 +165,18 @@
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
-      "fileCount": 1,
-      "lastAccessed": 1776164182880,
+      "fileCount": 2,
+      "lastAccessed": 1776653217887,
       "keyFiles": [
-        "docker-deploy.sh"
+        "docker-deploy.sh",
+        "upgrade.sh"
       ]
     },
     "styles": {
       "path": "styles",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1776164182880,
+      "lastAccessed": 1776653217887,
       "keyFiles": [
         "globals.css"
       ]
@@ -183,25 +184,28 @@
     "tests": {
       "path": "tests",
       "purpose": "Test files",
-      "fileCount": 2,
-      "lastAccessed": 1776164182880,
+      "fileCount": 5,
+      "lastAccessed": 1776653217887,
       "keyFiles": [
+        "market-analysis-contract.test.mjs",
         "readme.test.mjs",
-        "sqlite-contract.test.mjs"
+        "service-pipeline-contract.test.mjs",
+        "sqlite-contract.test.mjs",
+        "task6-contract.test.mjs"
       ]
     },
     "app/api": {
       "path": "app/api",
       "purpose": "API routes",
       "fileCount": 0,
-      "lastAccessed": 1776164182881,
+      "lastAccessed": 1776653217888,
       "keyFiles": []
     },
     "app/services": {
       "path": "app/services",
       "purpose": "Business logic services",
       "fileCount": 1,
-      "lastAccessed": 1776164182881,
+      "lastAccessed": 1776653217888,
       "keyFiles": [
         "page.tsx"
       ]
@@ -209,303 +213,15 @@
   },
   "hotPaths": [
     {
-      "path": "app/tasks/[id]/page.tsx",
-      "accessCount": 48,
-      "lastAccessed": 1776243558536,
-      "type": "file"
-    },
-    {
-      "path": "app/tasks/page.tsx",
-      "accessCount": 44,
-      "lastAccessed": 1776243190401,
-      "type": "file"
-    },
-    {
-      "path": "components/task-detail-dialog.tsx",
-      "accessCount": 31,
-      "lastAccessed": 1776243542452,
-      "type": "file"
-    },
-    {
-      "path": "components/task-card.tsx",
-      "accessCount": 17,
-      "lastAccessed": 1776242174774,
-      "type": "file"
-    },
-    {
-      "path": "components/create-task-dialog.tsx",
-      "accessCount": 15,
-      "lastAccessed": 1776185623387,
-      "type": "file"
-    },
-    {
       "path": "",
-      "accessCount": 13,
-      "lastAccessed": 1776231141769,
+      "accessCount": 4,
+      "lastAccessed": 1776653473106,
       "type": "directory"
-    },
-    {
-      "path": "app/settings/page.tsx",
-      "accessCount": 9,
-      "lastAccessed": 1776231368464,
-      "type": "file"
-    },
-    {
-      "path": "package.json",
-      "accessCount": 7,
-      "lastAccessed": 1776166062219,
-      "type": "file"
-    },
-    {
-      "path": "lib/schema.ts",
-      "accessCount": 7,
-      "lastAccessed": 1776243471993,
-      "type": "file"
-    },
-    {
-      "path": "components/add-service-dialog.tsx",
-      "accessCount": 6,
-      "lastAccessed": 1776186605841,
-      "type": "file"
-    },
-    {
-      "path": "app/services/page.tsx",
-      "accessCount": 6,
-      "lastAccessed": 1776186606035,
-      "type": "file"
-    },
-    {
-      "path": "app/api/github/pull-request/route.ts",
-      "accessCount": 5,
-      "lastAccessed": 1776077769356,
-      "type": "file"
-    },
-    {
-      "path": "app/api/github/pr-status/route.ts",
-      "accessCount": 5,
-      "lastAccessed": 1776077779602,
-      "type": "file"
-    },
-    {
-      "path": "app/dashboard/page.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1776077947727,
-      "type": "file"
-    },
-    {
-      "path": "app/api/github/check-merge-status/route.ts",
-      "accessCount": 4,
-      "lastAccessed": 1776077816206,
-      "type": "file"
-    },
-    {
-      "path": "app/api/github/branch-diff/route.ts",
-      "accessCount": 4,
-      "lastAccessed": 1776077816351,
-      "type": "file"
-    },
-    {
-      "path": "app/branches/page.tsx",
-      "accessCount": 4,
-      "lastAccessed": 1776078007671,
-      "type": "file"
-    },
-    {
-      "path": "Dockerfile",
-      "accessCount": 4,
-      "lastAccessed": 1776166068261,
-      "type": "file"
     },
     {
       "path": "app/api/tasks/route.ts",
-      "accessCount": 4,
-      "lastAccessed": 1776231537586,
-      "type": "file"
-    },
-    {
-      "path": "app/api/tasks/[id]/route.ts",
-      "accessCount": 4,
-      "lastAccessed": 1776231622113,
-      "type": "file"
-    },
-    {
-      "path": "lib/db.ts",
-      "accessCount": 4,
-      "lastAccessed": 1776243477811,
-      "type": "file"
-    },
-    {
-      "path": "hooks/use-local-storage.ts",
-      "accessCount": 3,
-      "lastAccessed": 1776077138809,
-      "type": "file"
-    },
-    {
-      "path": "lib/github-api.ts",
-      "accessCount": 3,
-      "lastAccessed": 1776077150587,
-      "type": "file"
-    },
-    {
-      "path": "components/main-layout.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1776078268942,
-      "type": "file"
-    },
-    {
-      "path": "lib",
-      "accessCount": 3,
-      "lastAccessed": 1776186597426,
-      "type": "directory"
-    },
-    {
-      "path": "lib/types.ts",
-      "accessCount": 3,
-      "lastAccessed": 1776231205927,
-      "type": "file"
-    },
-    {
-      "path": "CLAUDE.md",
-      "accessCount": 2,
-      "lastAccessed": 1776070646221,
-      "type": "file"
-    },
-    {
-      "path": "app/page.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1776073175255,
-      "type": "file"
-    },
-    {
-      "path": ".dockerignore",
-      "accessCount": 2,
-      "lastAccessed": 1776165632710,
-      "type": "file"
-    },
-    {
-      "path": "scripts/upgrade.sh",
-      "accessCount": 2,
-      "lastAccessed": 1776165651130,
-      "type": "file"
-    },
-    {
-      "path": "docker-compose.yml",
-      "accessCount": 2,
-      "lastAccessed": 1776166062843,
-      "type": "file"
-    },
-    {
-      "path": "app/api/services/route.ts",
-      "accessCount": 2,
-      "lastAccessed": 1776185858130,
-      "type": "file"
-    },
-    {
-      "path": "design.txt",
-      "accessCount": 2,
-      "lastAccessed": 1776186574725,
-      "type": "file"
-    },
-    {
-      "path": "lib/github-utils.ts",
-      "accessCount": 2,
-      "lastAccessed": 1776186593782,
-      "type": "file"
-    },
-    {
-      "path": "app/api/settings/route.ts",
-      "accessCount": 2,
-      "lastAccessed": 1776186614090,
-      "type": "file"
-    },
-    {
-      "path": "app/api/github/configs/route.ts",
-      "accessCount": 2,
-      "lastAccessed": 1776186618305,
-      "type": "file"
-    },
-    {
-      "path": "app/api/github/configs/[id]/route.ts",
-      "accessCount": 2,
-      "lastAccessed": 1776186621138,
-      "type": "file"
-    },
-    {
-      "path": "app",
       "accessCount": 1,
-      "lastAccessed": 1776070589067,
-      "type": "directory"
-    },
-    {
-      "path": "components",
-      "accessCount": 1,
-      "lastAccessed": 1776070589470,
-      "type": "directory"
-    },
-    {
-      "path": "hooks",
-      "accessCount": 1,
-      "lastAccessed": 1776070590570,
-      "type": "directory"
-    },
-    {
-      "path": "lib/branch-generator.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776070600720,
-      "type": "file"
-    },
-    {
-      "path": "app/layout.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776073175434,
-      "type": "file"
-    },
-    {
-      "path": "lib/utils.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776073195086,
-      "type": "file"
-    },
-    {
-      "path": "components/sidebar.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776073207269,
-      "type": "file"
-    },
-    {
-      "path": "app/tasks",
-      "accessCount": 1,
-      "lastAccessed": 1776075375562,
-      "type": "directory"
-    },
-    {
-      "path": "drizzle.config.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776077656886,
-      "type": "file"
-    },
-    {
-      "path": "app/api/services/[id]/route.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776077726865,
-      "type": "file"
-    },
-    {
-      "path": "scripts/docker-deploy.sh",
-      "accessCount": 1,
-      "lastAccessed": 1776165373433,
-      "type": "file"
-    },
-    {
-      "path": "next.config.mjs",
-      "accessCount": 1,
-      "lastAccessed": 1776165600335,
-      "type": "file"
-    },
-    {
-      "path": "app/globals.css",
-      "accessCount": 1,
-      "lastAccessed": 1776166041142,
+      "lastAccessed": 1776653473047,
       "type": "file"
     }
   ],

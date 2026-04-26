@@ -30,18 +30,6 @@ const branchStatusLabels: Record<string, string> = {
   archived: "已归档",
 }
 
-const priorityLabels: Record<string, string> = {
-  high: "高",
-  medium: "中",
-  low: "低",
-}
-
-const priorityColors: Record<string, string> = {
-  high: "bg-red-100 text-red-800 border-red-200",
-  medium: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  low: "bg-green-100 text-green-800 border-green-200",
-}
-
 const branchStatusColors: Record<string, string> = {
   merged: "bg-green-100 text-green-800",
   closed: "bg-zinc-100 text-zinc-800",

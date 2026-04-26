@@ -5,6 +5,7 @@
 ## ✨ 功能概览
 
 - **仪表盘**：统计任务数量、完成率、优先级/状态分布、服务与成员工作量
+- **行情分析**：聚合币安广场热度、每日高频币种和合约涨幅波动，输出建议交易币种
 - **任务看板**：五阶段流转（待规划 → 待开发 → 开发中 → 待审核 → 已完成）、拖拽移动、筛选搜索、批量删除
 - **任务详情**：按需求分支聚合查看挂靠服务、开发者、阶段状态与 PR 历史
 - **服务管理**：维护服务、仓库归属和阶段流水线入口
@@ -77,6 +78,7 @@ docker compose up -d --build
 
 - 当前表结构以 `repositories` 为根实体，需求分支和服务都显式挂靠到仓库
 - 阶段化流转通过 `service_stages`、`pull_requests`、`service_branch_stage_snapshots` 表达，而不是在任务里内嵌旧分支 blob
+- 数据库初始化明确不使用外键约束，实体关联和级联清理由应用层保证
 - 数据库层仍尽量保持弱耦合，跨表清理由 `app/api/*` 在应用层显式处理
 
 ### 数据持久化
@@ -102,6 +104,7 @@ pnpm build
 | --- | --- | --- |
 | `/` | 启动页，自动跳转到仪表盘 | `app/page.tsx` |
 | `/dashboard` | 数据总览、状态/优先级/服务统计 | `app/dashboard/page.tsx` |
+| `/market-analysis` | 聚合热度、频次和波动后的行情分析页 | `app/market-analysis/page.tsx` |
 | `/tasks` | 主看板页面，包含拖拽、筛选、批量操作 | `app/tasks/page.tsx`、`TaskCard`、`CreateTaskDialog`、`SearchFilter` |
 | `/tasks/[id]` | 单任务详情页，按需求分支聚合展示服务、开发者和阶段状态 | `app/tasks/[id]/page.tsx` |
 | `/services` | 服务登记与仓库归属配置 | `app/services/page.tsx`、`AddServiceDialog` |
@@ -117,6 +120,7 @@ pnpm build
 graph TD
   Root["/"] --> Dashboard["/dashboard"]
   Dashboard --> Sidebar["Sidebar 导航"]
+  Sidebar --> MarketAnalysis["/market-analysis"]
   Sidebar --> Tasks["/tasks"]
   Sidebar --> Services["/services"]
   Sidebar --> Repositories["/repositories"]
@@ -262,6 +266,7 @@ kanban-board/
 │   │   └── tasks/
 │   ├── branches/page.tsx
 │   ├── dashboard/page.tsx
+│   ├── market-analysis/page.tsx
 │   ├── services/page.tsx
 │   ├── settings/page.tsx
 │   ├── tasks/
